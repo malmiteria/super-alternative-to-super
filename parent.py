@@ -16,6 +16,7 @@ def build_parenting_order(cls, res=None):
         res = [cls]
     unvisited_bases = [el for el in cls.__bases__ if el not in res and el is not object and el is not Parenting]
     for b in unvisited_bases:
-        res.append(b)
+        if b not in res and b is not object and b is not Parenting:
+            res.append(b)
         build_parenting_order(b, res)
     return res
