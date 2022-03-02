@@ -1,4 +1,4 @@
-from parent import Parenting, build_parenting_order
+from parent import Parenting
 
 
 class G(Parenting):
@@ -42,4 +42,3 @@ class A(B,C):
         #yield from super().method()
 
 print(list(A().method()))
-print(build_parenting_order(A))
