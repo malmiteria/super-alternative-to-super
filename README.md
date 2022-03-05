@@ -63,7 +63,7 @@ class Problem(A,B): # X < Y AND Y < X, can't resolve MRO, raise a TypeError and 
 
 In python, MRO is used to resolve attributes too.
 
-If you are curious to know what the mro of a class is, just print <the_class_you're_curious_about>.__mro__
+If you are curious to know what the mro of a class is, just print ```<the_class_you're_curious_about>.__mro__```
 
 2. What is super
 
@@ -142,7 +142,7 @@ E().method() # prints E A D C D (despite E.__mro__ presenting no duplicates, and
 
 The mro as it stands is flawed in four ways in my opinion:
  - the order in which parents of a class A are visited isn't reliable, and can be altered by A's childs, despite the fact that A's definition doesn't involve A's child at all. It is not possible to garantee any mro will be preserved in any context.
- - The mro hides what really should be an error by trying to solveit, and refuses developper the opportunity solve it case by case, when it would emerge
+ - The mro hides what really should be an error by trying to solve it, and refuses developper the opportunity solve it case by case, when it would emerge
  - the mro can't solve the problem it pretends to in all context, and then assumes the error to be too critical to allow developpers to plug in their solutions. (mro failure leads to class definition being not allowed)
  - it doesn't allows for duplicates, assuming that no one would want that.
 
@@ -162,7 +162,7 @@ super acts as a proxy to the class it points to, meaning we don't have to pass t
 5. what would be an ideal solution
 
 I think it can be boiled down to those features
- - *straightforward case* : when a class "A" has a method "method", no matter if A has any parents, A().method should resolve the the method "method" of class "A"
+ - *straightforward case* : when a class "A" has a method "method", no matter if A has any parents, A().method should resolve to the method "method" of class "A"
  - *can't be found* : when a class A *doesn't* have a method "method", and *all* it's parent raise a "MethodDoesNotExist" error, A().method should raise a "MethodDoesNotExist" error.
  - *only one parent has it* : when a class "A" *doesn't* have a method "method", inherits from class "B" which can resolve a method "method", and also inherits from 0 to n other classes, *all* of which raising a "MethodDoesNotExist" error when looking for the method "method", A().method should resolve to the method "method" of class "B"
  - *multiple parents have it* : when a class "A" *doesn't* have a method "method", and inherits from multiple parent, at least two of which can resolve a method "method", A().method should raise a ConcurentMethodResolutionError, stating that explicit inheritence order is required

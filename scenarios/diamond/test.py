@@ -2,7 +2,7 @@
 class TestSuper:
     def test_from_A(self):
         from .super import A
-        assert list(A().method()) == ['A', 'B', 'D', 'C', 'D']
+        assert list(A().method()) == ['A', 'B', 'C', 'D']
 
     def test_from_B(self):
         from .super import B

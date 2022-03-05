@@ -7,15 +7,15 @@ class D(Parenting):
 class C(D):
     def method(self, *args, **kwargs):
         yield 'C'
-        yield from self.parent(D).method(*args, **kwargs)
+        yield from C.__as_parent__(D, self).method(*args, **kwargs)
 
 class B(D):
     def method(self, *args, **kwargs):
         yield 'B'
-        yield from self.parent(D).method(*args, **kwargs)
+        yield from B.__as_parent__(D, self).method(*args, **kwargs)
 
 class A(B,C):
     def method(self, *args, **kwargs):
         yield 'A'
-        yield from self.parent(B).method(*args, **kwargs)
-        yield from self.parent(C).method(*args, **kwargs)
+        yield from A.__as_parent__(B, self).method(*args, **kwargs)
+        yield from A.__as_parent__(C, self).method(*args, **kwargs)

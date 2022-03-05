@@ -7,4 +7,4 @@ class B(Parenting):
 class A(B):
     def method(self, *args, **kwargs):
         yield 'A'
-        yield from self.parent(B).method(*args, **kwargs)
+        yield from A.__as_parent__(B, self).method(*args, **kwargs)
