@@ -2,7 +2,7 @@ Motivation :
 the super builtin works in misterious ways, this projects attempts at crafting a better solution.
 
 The problems :
- - In case of multiple inheritence, super would not always point to the direct parent
+ - In case of multiple inheritance, super would not always point to the direct parent
  - the MRO (method resolution order) algorithm, doesn't match the zen of python's guidelines, mainly :
    - errors shouldn't pass silently
    - explicit is better than implicit
@@ -12,7 +12,7 @@ A little explanation
 
 1. What is MRO:
 
-Inheritence implies that a child class would inherit parent methods. For example
+Inheritance implies that a child class would inherit parent methods. For example
 ```
 class B:
     def method(self):
@@ -23,7 +23,7 @@ class A(B):
 A().method() # prints B
 ```
 
-In case of multiple inheritence, such as : 
+In case of multiple inheritance, such as : 
 ```
 class C:
     def method(self):
@@ -38,7 +38,7 @@ It is unclear what ```A().method()``` should print.
 
 Or in other term, there is a conflict between the parents method when a child instance tries to inherit a method that both parent seem to have.
 
-The MRO algorithm comes as a solution to this problem, by linearising the inheritence trees, which in term allows to resolve the method of instance A as the method of the first parent in MRO order capable to deliver this method.
+The MRO algorithm comes as a solution to this problem, by linearising the inheritance trees, which in term allows to resolve the method of instance A as the method of the first parent in MRO order capable to deliver this method.
 
 This linearisation comes with a few meaningful rules, such as:
  - child < parent
@@ -47,7 +47,7 @@ This linearisation comes with a few meaningful rules, such as:
 
 I do not know if there are more rules into MRO.
 
-This also means that some inheritence trees are not allowed, such as:
+This also means that some inheritance trees are not allowed, such as:
 ```
 class X:
     pass
@@ -69,7 +69,7 @@ If you are curious to know what the mro of a class is, just print ```<the_class_
 
 super is a builtin method that acts as a proxy that can be used (not exclusively) when a child class wants to access it's parent class context.
 
-The most common use is in case of inheritence, when the child class extends a parent method:
+The most common use is in case of inheritance, when the child class extends a parent method:
 ```
 class B:
     def method(self):
@@ -82,7 +82,7 @@ class A(B):
 A().method() # prints A then prints B
 ```
 
-In case of multiple inheritence, super visit the next class in line:
+In case of multiple inharitence, super visit the next class in line:
 ```
 class C:
     def method(self):
@@ -113,7 +113,7 @@ class A(B,C):
         print('A')
         super().method()
 ```
-option 2, which would still allow B().method() to run properly, but some inheritence trees including A could fail:
+option 2, which would still allow B().method() to run properly, but some inheritance trees including A could fail:
 ```
 class C:
     def method(self):
@@ -165,7 +165,7 @@ I think it can be boiled down to those features
  - *straightforward case* : when a class "A" has a method "method", no matter if A has any parents, A().method should resolve to the method "method" of class "A"
  - *can't be found* : when a class A *doesn't* have a method "method", and *all* it's parent raise a "MethodDoesNotExist" error, A().method should raise a "MethodDoesNotExist" error.
  - *only one parent has it* : when a class "A" *doesn't* have a method "method", inherits from class "B" which can resolve a method "method", and also inherits from 0 to n other classes, *all* of which raising a "MethodDoesNotExist" error when looking for the method "method", A().method should resolve to the method "method" of class "B"
- - *multiple parents have it* : when a class "A" *doesn't* have a method "method", and inherits from multiple parent, at least two of which can resolve a method "method", A().method should raise a ConcurentMethodResolutionError, stating that explicit inheritence order is required
+ - *multiple parents have it* : when a class "A" *doesn't* have a method "method", and inherits from multiple parent, at least two of which can resolve a method "method", A().method should raise a ConcurentMethodResolutionError, stating that explicit inheritance order is required
  - *transmitting errors* : when a class "A" *doesn't* have a method "method", if any parent raises a ConcurentMethodResolutionError, A().method should raise a ConcurentMethodResolutionError
 
 Any ConcurentMethodResolutionError on method "method" of class "A"could then be solved by adding the method "method" in class "A".
