@@ -77,7 +77,7 @@ class TestMROOnlyOneParentHasIt(unittest.TestCase):
 
 
 class TestMROMultipleParentHaveIt(unittest.TestCase):
-    def test_double_inheritence(self):
+    def test_double_inheritance(self):
         class C(Parenting):
             def method(self):
                 return 'C'
