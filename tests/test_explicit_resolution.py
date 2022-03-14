@@ -208,3 +208,76 @@ class TestMROMultipleParentHaveIt(unittest.TestCase):
         with self.assertRaises(ConcurentMethodResolutionError):
             A().attribute
 
+
+class TestMROMultipleParentResolveItFromTheSameGrandparent(unittest.TestCase):
+    def test_diamond_shape(self):
+        class D(Parenting):
+            attribute = 'd'
+            def method(self):
+                return 'D'
+        class C(D):
+            pass
+        class B(D):
+            pass
+        class A(B,C):
+            pass
+
+        assert A().method() == 'D'
+        assert A().attribute == 'd'
+
+    def test_diamond_shape_but_child_resolves_it(self):
+        class D(Parenting):
+            attribute = 'd'
+            def method(self):
+                return 'D'
+        class C(D):
+            pass
+        class B(D):
+            pass
+        class A(B,C):
+            attribute = 'a'
+            def method(self):
+                return 'A'
+
+        assert A().method() == 'A'
+        assert A().attribute == 'a'
+
+    def test_diamond_shape_but_one_direct_parent_redefines_it(self):
+        class D(Parenting):
+            attribute = 'd'
+            def method(self):
+                return 'D'
+        class C(D):
+            attribute = 'c'
+            def method(self):
+                return 'C'
+        class B(D):
+            pass
+        class A(B,C):
+            pass
+
+        with self.assertRaises(ConcurentMethodResolutionError):
+            A().method
+        with self.assertRaises(ConcurentMethodResolutionError):
+            A().attribute
+
+    def test_diamond_shape_but_another_parent_resolves_it(self):
+        class E(Parenting):
+            attribute = 'e'
+            def method(self):
+                return 'E'
+        class D(Parenting):
+            attribute = 'd'
+            def method(self):
+                return 'D'
+        class C(E):
+            pass
+        class B(E):
+            pass
+        class A(B,C,D):
+            pass
+
+        with self.assertRaises(ConcurentMethodResolutionError):
+            A().method
+        with self.assertRaises(ConcurentMethodResolutionError):
+            A().attribute

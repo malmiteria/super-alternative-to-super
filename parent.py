@@ -18,23 +18,23 @@ class Parenting:
             return super().__getattribute__(name)
         if name in self.__class__.__dict__:
             return super().__getattribute__(name)
-        return self.recur_getattr(self.__class__, name)
+        return list(self.recur_getattr(self.__class__, name).values())[0]
 
     def recur_getattr(self, cls, name):
-        res = []
+        res = {}
         for parent in cls.__bases__:
             if name in parent.__dict__:
-                res.append(super().__getattribute__(name))
+                res[parent] = super().__getattribute__(name)
                 continue
             try:
-                res.append(self.recur_getattr(parent, name))
+                res.update(self.recur_getattr(parent, name))
             except AttributeError:
                 pass
         if len(res) >= 2:
             raise ConcurentMethodResolutionError
         if len(res) == 0:
             raise AttributeError
-        return res[0]
+        return res
 
 # TODO:
 # adding a __as_class__ which points to the context of the current element.
