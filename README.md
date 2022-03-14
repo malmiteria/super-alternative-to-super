@@ -82,7 +82,7 @@ class A(B):
 A().method() # prints A then prints B
 ```
 
-In case of multiple inharitence, super visit the next class in line:
+In case of multiple inheritance, super visits the next class in line:
 ```
 class C:
     def method(self):
@@ -98,8 +98,8 @@ class A(B,C):
 A().method() # prints A then prints B (and never prints C)
 ```
 
-in this exemple, if you want A().method() to print A B C using super, you have two options, both are not reliable:
-option 1, which is consistent with the argumentless syntax of super, but make it impossible to use B().method() as it now would raise an error.:
+in this exemple, if you want `A().method()` to print A B C using `super`, you have two options, both are not reliable:
+option 1, which is consistent with the argumentless syntax of `super`, but make it impossible to use B().method() as it now would raise an error.:
 ```
 class C:
     def method(self):
@@ -113,7 +113,7 @@ class A(B,C):
         print('A')
         super().method()
 ```
-option 2, which would still allow B().method() to run properly, but some inheritance trees including A could fail:
+option 2, which would still allow `B().method()` to run properly, but some inheritance trees including A could fail:
 ```
 class C:
     def method(self):
@@ -146,7 +146,7 @@ The mro as it stands is flawed in four ways in my opinion:
  - the mro can't solve the problem it pretends to in all context, and then assumes the error to be too critical to allow developpers to plug in their solutions. (mro failure leads to class definition being not allowed)
  - it doesn't allows for duplicates, assuming that no one would want that.
 
-super as it stands is flawed in two ways in my opinion:
+`super()` as it stands is flawed in two ways in my opinion:
  - it relies on mro, so it brings in all mro flaws with it
  - it adds a level of indirection by giving the context of the next in mro line instead of the context of the class passed as argument : ```super(A, self)``` is a proxy to the parent of A, not of A.
 
@@ -156,19 +156,19 @@ super as it stands is flawed in two ways in my opinion:
 The mro is a solution to a possible conflict between multiple parents methods. As much as i would prefer the error to not be silenced, a solution should still be provided.
 It works very well for simple cases, and any other solutions should probably do as well on those simple cases.
 
-super acts as a proxy to the class it points to, meaning we don't have to pass the instance as first argument of any method accessed through super.
+`super()` acts as a proxy to the class it points to, meaning we don't have to pass the instance as first argument of any method accessed through super.
 
 
 5. what would be an ideal solution
 
 I think it can be boiled down to those features
- - *straightforward case* : when a class "A" has a method "method", no matter if A has any parents, A().method should resolve to the method "method" of class "A"
- - *can't be found* : when a class A *doesn't* have a method "method", and *all* it's parent raise a "MethodDoesNotExist" error, A().method should raise a "MethodDoesNotExist" error.
- - *only one parent has it* : when a class "A" *doesn't* have a method "method", inherits from class "B" which can resolve a method "method", and also inherits from 0 to n other classes, *all* of which raising a "MethodDoesNotExist" error when looking for the method "method", A().method should resolve to the method "method" of class "B"
- - *multiple parents have it* : when a class "A" *doesn't* have a method "method", and inherits from multiple parent, at least two of which can resolve a method "method", A().method should raise a ConcurentMethodResolutionError, stating that explicit inheritance order is required
- - *transmitting errors* : when a class "A" *doesn't* have a method "method", if any parent raises a ConcurentMethodResolutionError, A().method should raise a ConcurentMethodResolutionError
+ - *straightforward case* : when a class "A" has a method "method", no matter if A has any parents, `A().method` should resolve to the method "method" of class "A"
+ - *can't be found* : when a class A *doesn't* have a method "method", and *all* it's parent raise a "MethodDoesNotExist" error, `A().method` should raise a "MethodDoesNotExist" error.
+ - *only one parent has it* : when a class "A" *doesn't* have a method "method", inherits from class "B" which can resolve a method "method", and also inherits from 0 to n other classes, *all* of which raising a "MethodDoesNotExist" error when looking for the method "method", `A().method` should resolve to the method "method" of class "B"
+ - *multiple parents have it* : when a class "A" *doesn't* have a method "method", and inherits from multiple parent, at least two of which can resolve a method "method", `A().method` should raise a `ConcurentMethodResolutionError`, stating that explicit inheritance order is required
+ - *transmitting errors* : when a class "A" *doesn't* have a method "method", if any parent raises a `ConcurentMethodResolutionError`, `A().method` should raise a `ConcurentMethodResolutionError`
 
-Any ConcurentMethodResolutionError on method "method" of class "A"could then be solved by adding the method "method" in class "A".
+Any `ConcurentMethodResolutionError` on method "method" of class "A"could then be solved by adding the method "method" in class "A".
 Obviously, inside the definition of this method, it should be possible to point to one of the parents method, or multiple.
 Such a feature could be accomplished by a method as such:
 ```
