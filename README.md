@@ -82,7 +82,7 @@ class A(B):
 A().method() # prints A then prints B
 ```
 
-In case of multiple inharitence, super visit the next class in line:
+In case of multiple inheritance, super visit the next class in line:
 ```
 class C:
     def method(self):
@@ -161,17 +161,21 @@ super acts as a proxy to the class it points to, meaning we don't have to pass t
 
 5. what would be an ideal solution
 
-I think it can be boiled down to those features
+I think it can be boiled down to those features :
  - *straightforward case* : when a class "A" has a method "method", no matter if A has any parents, A().method should resolve to the method "method" of class "A"
  - *can't be found* : when a class A *doesn't* have a method "method", and *all* it's parent raise a "MethodDoesNotExist" error, A().method should raise a "MethodDoesNotExist" error.
  - *only one parent has it* : when a class "A" *doesn't* have a method "method", inherits from class "B" which can resolve a method "method", and also inherits from 0 to n other classes, *all* of which raising a "MethodDoesNotExist" error when looking for the method "method", A().method should resolve to the method "method" of class "B"
  - *multiple parents have it* : when a class "A" *doesn't* have a method "method", and inherits from multiple parent, at least two of which can resolve a method "method", A().method should raise a ConcurentMethodResolutionError, stating that explicit inheritance order is required
  - *transmitting errors* : when a class "A" *doesn't* have a method "method", if any parent raises a ConcurentMethodResolutionError, A().method should raise a ConcurentMethodResolutionError
 
-Any ConcurentMethodResolutionError on method "method" of class "A"could then be solved by adding the method "method" in class "A".
-Obviously, inside the definition of this method, it should be possible to point to one of the parents method, or multiple.
+a possible extra feature would be :
+ - *multiple parent have it, but from the same source (ie. diamond shape inheritance)* : when a class "A" *doesn't* have a method "method", and inherits from multiple parent, at least two of which can resolve a method "method", *and* all of the parent resolving the method "method" from the same, unique grandparent "G", A().method should resolve to the method "method" of the grandparent class "G"
+
+Any ConcurentMethodResolutionError on method "method" of class "A"could then be solved by the developper, by adding the method "method" in class "A".
+Obviously, inside the definition of this method, it should be possible to point to one of the parents method, or multiple, relying on this method resolution algorithm, or on the old fashionned mro.
 Such a feature could be accomplished by a method as such:
 ```
 def __as_parent__(self, parent_class):
-    #return the same kind of proxy super does, on class parent_class
+    # return the same kind of proxy super does, on class parent_class
+    # for exemple by calling super on the direct predecessor of parent_class in mro
 ```
