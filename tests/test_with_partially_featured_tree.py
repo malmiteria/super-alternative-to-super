@@ -105,13 +105,13 @@ class DP2(DGP): pass
 class DiamondParented(DP1,DP2):
     pass
 
-class DGU(Parenting):
+class DGU:
     attribute = 'diamond_grandparent_has_it_unparented'
     def method(self):
         return 'DiamondGrandparentHasItUnparented'
-class DP1(DGU): pass
-class DP2(DGU): pass
-class DiamondUnparented(DP1,DP2):
+class DU1(DGU): pass
+class DU2(DGU): pass
+class DiamondUnparented(DU1,DU2):
     pass
 
 class_cases = {
@@ -601,3 +601,85 @@ class TestChildDoesntHaveIt_UPorder_PD(unittest.TestCase):
             assert A().method
         with self.assertRaises(ConcurentMethodResolutionError):
             assert A().attribute
+
+
+class TestChildDoesntHaveIt_Unparented_Parenting(unittest.TestCase):
+    def test_UNF_Parenting(self):
+        class A(ccu['NF'],Parenting):
+            pass
+
+        with self.assertRaises(AttributeError):
+            assert A().method
+        with self.assertRaises(AttributeError):
+            assert A().attribute
+
+    def test_USF_Parenting(self):
+        class A(ccu['SF'],Parenting):
+            pass
+
+        assert A().method() == 'StraightForwardUnparented'
+        assert A().attribute == 'straight_forward_unparented'
+
+    def test_UO1PHI_Parenting(self):
+        class A(ccu['O1PHI'],Parenting):
+            pass
+
+        assert A().method() == 'OnlyOneParentHasItUnparented'
+        assert A().attribute == 'only_one_parent_has_it_unparented'
+
+    def test_UMPHI_Parenting(self):
+        class A(ccu['MPHI'],Parenting):
+            pass
+
+        with self.assertRaises(ConcurentMethodResolutionError):
+            assert A().method
+        with self.assertRaises(ConcurentMethodResolutionError):
+            assert A().attribute
+
+    def test_UD_Parenting(self):
+        class A(ccu['D'],Parenting):
+            pass
+
+        assert A().method() == 'DiamondGrandparentHasItUnparented'
+        assert A().attribute == 'diamond_grandparent_has_it_unparented'
+
+
+class TestChildDoesntHaveIt_Parenting_Unparented(unittest.TestCase):
+    def test_Parenting_UNF(self):
+        class A(Parenting,ccu['NF']):
+            pass
+
+        with self.assertRaises(AttributeError):
+            assert A().method
+        with self.assertRaises(AttributeError):
+            assert A().attribute
+
+    def test_Parenting_USF(self):
+        class A(Parenting,ccu['SF']):
+            pass
+
+        assert A().method() == 'StraightForwardUnparented'
+        assert A().attribute == 'straight_forward_unparented'
+
+    def test_Parenting_UO1PHI(self):
+        class A(Parenting,ccu['O1PHI']):
+            pass
+
+        assert A().method() == 'OnlyOneParentHasItUnparented'
+        assert A().attribute == 'only_one_parent_has_it_unparented'
+
+    def test_Parenting_UMPHI(self):
+        class A(Parenting,ccu['MPHI']):
+            pass
+
+        with self.assertRaises(ConcurentMethodResolutionError):
+            assert A().method
+        with self.assertRaises(ConcurentMethodResolutionError):
+            assert A().attribute
+
+    def test_Parenting_UD(self):
+        class A(Parenting,ccu['D']):
+            pass
+
+        assert A().method() == 'DiamondGrandparentHasItUnparented'
+        assert A().attribute == 'diamond_grandparent_has_it_unparented'
