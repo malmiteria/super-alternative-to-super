@@ -10,16 +10,10 @@ def get_source_line_range(code_element):
 
 
 class Parenting:
-    def __mro_without_object_and_parenting(self):
-        for cls in self.__class__.__mro__:
-            if cls in [object, __class__]:
-                continue
-            yield cls
-
     def __caller_class(self):
         caller_frame = inspect.stack()[2].frame # 2 because the previous context is the __as_parent__ method, and the caller is __as_parent__ calling context, so we need two frames level 
         caller_lnum = caller_frame.f_lineno
-        for cls in self.__mro_without_object_and_parenting():
+        for cls in self.__class__.__mro__:
             if caller_lnum not in get_source_line_range(cls):
                 continue
             return cls
