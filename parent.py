@@ -1,15 +1,38 @@
+import inspect
 
 class ConcurentMethodResolutionError(Exception):
     pass
 
+
+def get_source_line_range(code_element):
+    lines = inspect.getsourcelines(code_element)
+    return range(lines[1], lines[1] + len(lines[0]))
+
+
 class Parenting:
-    @classmethod
-    def __as_parent__(cls, parent_cls, instance):
-        # raise error when instance.__class__ != cls?
-        if parent_cls not in cls.__bases__:
-            raise TypeError(f"{parent_cls} is not a parent of {cls}. Available options are {cls.__bases__}")
-        ancestor_index = instance.__class__.__mro__.index(parent_cls)
-        return super(instance.__class__.__mro__[ancestor_index - 1], instance)
+    def __mro_without_object_and_parenting(self):
+        for cls in self.__class__.__mro__:
+            if cls in [object, __class__]:
+                continue
+            yield cls
+
+    def __caller_class(self):
+        caller_frame = inspect.stack()[2].frame # 2 because the previous context is the __as_parent__ method, and the caller is __as_parent__ calling context, so we need two frames level 
+        caller_lnum = caller_frame.f_lineno
+        for cls in self.__mro_without_object_and_parenting():
+            if caller_lnum not in get_source_line_range(cls):
+                continue
+            return cls
+ 
+    def __as_parent__(self, parent_cls):
+        caller_cls = self.__caller_class()
+        if caller_cls == parent_cls:
+            raise TypeError(f"{parent_cls} is not a parent of itself")
+        if parent_cls not in caller_cls.__mro__:
+            raise TypeError(f"{parent_cls} is not an ancestor of {caller_cls}. Available options are {caller_cls.__mro__}")
+        current_mro = self.__class__.__mro__
+        ancestor_index = current_mro.index(parent_cls)
+        return super(current_mro[ancestor_index - 1], self)
 
     def __getattribute__(self, name):
         if name in ["recur_getattr", "__class__", "__dict__"]:
