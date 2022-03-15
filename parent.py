@@ -8,10 +8,15 @@ def get_source_line_range(code_element):
     lines = inspect.getsourcelines(code_element)
     return range(lines[1], lines[1] + len(lines[0]))
 
+def function_caller_frame(function):
+    for frame_info in inspect.stack():
+        if frame_info.function == function.__name__:
+            return frame_info.frame.f_back
+
 
 class Parenting:
     def __caller_class(self):
-        caller_frame = inspect.stack()[2].frame # 2 because the previous context is the __as_parent__ method, and the caller is __as_parent__ calling context, so we need two frames level 
+        caller_frame = function_caller_frame(self.__as_parent__)
         caller_lnum = caller_frame.f_lineno
         for cls in self.__class__.__mro__:
             if caller_lnum not in get_source_line_range(cls):
