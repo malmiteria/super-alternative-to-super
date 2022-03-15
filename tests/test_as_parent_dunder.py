@@ -1,10 +1,10 @@
-from parent import Parenting
+from parent import AsParent
 import unittest
 
 
 class TestAsParentResolution(unittest.TestCase):
     def test_simple_inheritance(self):
-        class B(Parenting):
+        class B(AsParent):
             def method(self):
                 yield 'B'
         class A(B):
@@ -15,7 +15,7 @@ class TestAsParentResolution(unittest.TestCase):
         assert list(A().method()) == ['A', 'B']
 
     def test_with_one_extra_layer(self):
-        class C(Parenting):
+        class C(AsParent):
             def method(self):
                 yield 'C'
         class B(C):
@@ -30,10 +30,10 @@ class TestAsParentResolution(unittest.TestCase):
         assert list(A().method()) == ['A', 'B', 'C']
 
     def test_with_two_parents(self):
-        class C(Parenting):
+        class C(AsParent):
             def method(self):
                 yield 'C'
-        class B(Parenting):
+        class B(AsParent):
             def method(self):
                 yield 'B'
         class A(B,C):
@@ -45,7 +45,7 @@ class TestAsParentResolution(unittest.TestCase):
         assert list(A().method()) == ['A', 'B', 'C']
 
     def test_with_diamond_tree(self):
-        class D(Parenting):
+        class D(AsParent):
             def method(self):
                 yield 'D'
         class C(D):
@@ -66,7 +66,7 @@ class TestAsParentResolution(unittest.TestCase):
 
     def test_targeted_is_not_an_ancestor(self):
         class B: pass
-        class A(Parenting):
+        class A(AsParent):
             def method(self):
                 yield 'A'
                 yield from self.__as_parent__(B).method()
@@ -75,7 +75,7 @@ class TestAsParentResolution(unittest.TestCase):
             list(A().method())
 
     def test_can_target_indirect_parent(self):
-        class C(Parenting):
+        class C(AsParent):
             def method(self):
                 yield 'C'
         class B(C):
@@ -89,7 +89,7 @@ class TestAsParentResolution(unittest.TestCase):
         assert list(A().method()) == ['A', 'C']
 
     def test_cant_target_itself(self):
-        class A(Parenting):
+        class A(AsParent):
             def method(self):
                 yield 'A'
                 yield from self.__as_parent__(A).method()
@@ -98,7 +98,7 @@ class TestAsParentResolution(unittest.TestCase):
             list(A().method())
 
     def test_cant_target_itself_in_middle_of_tree(self):
-        class B(Parenting):
+        class B(AsParent):
             def method(self):
                 yield 'B'
                 self.__as_parent__(B).method()

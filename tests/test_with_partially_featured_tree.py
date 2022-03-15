@@ -1,4 +1,4 @@
-from parent import Parenting, ConcurentMethodResolutionError
+from parent import ExplicitMethodResolution, ConcurentMethodResolutionError
 import unittest
 
 # one parent not parented, one is, order matters
@@ -28,7 +28,7 @@ import unittest
 # Do the same for all features, with parented  and unparented presenting all different cases.
 # combinatory is huge, gl
 
-class StraightForwardParented(Parenting):
+class StraightForwardParented(ExplicitMethodResolution):
     attribute = 'straight_forward_parented'
     def method(self):
         return 'StraightForwardParented'
@@ -38,10 +38,10 @@ class StraightForwardUnparented:
     def method(self):
         return 'StraightForwardUnparented'
 
-class NFP1(Parenting): pass
-class NFP2(Parenting): pass
-class NFP3(Parenting): pass
-class NFP4(Parenting): pass
+class NFP1(ExplicitMethodResolution): pass
+class NFP2(ExplicitMethodResolution): pass
+class NFP3(ExplicitMethodResolution): pass
+class NFP4(ExplicitMethodResolution): pass
 class NotFoundParented(NFP1,NFP2,NFP3,NFP4):
     pass
 
@@ -52,14 +52,14 @@ class NFU4: pass
 class NotFoundUnparented(NFU1,NFU2,NFU3,NFU4):
     pass
 
-class O1PHIP(Parenting):
+class O1PHIP(ExplicitMethodResolution):
     attribute = 'only_one_parent_has_it_parented'
     def method(self):
         return 'OnlyOneParentHasItParented'
-class O1PHIP1(Parenting): pass
-class O1PHIP2(Parenting): pass
-class O1PHIP3(Parenting): pass
-class O1PHIP4(Parenting): pass
+class O1PHIP1(ExplicitMethodResolution): pass
+class O1PHIP2(ExplicitMethodResolution): pass
+class O1PHIP3(ExplicitMethodResolution): pass
+class O1PHIP4(ExplicitMethodResolution): pass
 class OnlyOneParentHasItParented(O1PHIP,O1PHIP1,O1PHIP2,O1PHIP3,O1PHIP4):
     pass
 
@@ -74,11 +74,11 @@ class O1PHIU4: pass
 class OnlyOneParentHasItUnparented(O1PHIU,O1PHIU1,O1PHIU2,O1PHIU3,O1PHIU4):
     pass
 
-class MPHI1(Parenting):
+class MPHI1(ExplicitMethodResolution):
     attribute = 'multiple_parent_have_it_parented_1'
     def method(self):
         return 'MultipleParentHaveItParented1'
-class MPHI2(Parenting):
+class MPHI2(ExplicitMethodResolution):
     attribute = 'multiple_parent_have_it_parented_2'
     def method(self):
         return 'MultipleParentHaveItParented2'
@@ -96,7 +96,7 @@ class MPHI2:
 class MultipleParentHaveItUnparented(MPHI1,MPHI2):
     pass
 
-class DGP(Parenting):
+class DGP(ExplicitMethodResolution):
     attribute = 'diamond_grandparent_has_it_parented'
     def method(self):
         return 'DiamondGrandparentHasItParented'
@@ -603,9 +603,9 @@ class TestChildDoesntHaveIt_UPorder_PD(unittest.TestCase):
             assert A().attribute
 
 
-class TestChildDoesntHaveIt_Unparented_Parenting(unittest.TestCase):
-    def test_UNF_Parenting(self):
-        class A(ccu['NF'],Parenting):
+class TestChildDoesntHaveIt_Unparented_ExplicitMethodResolution(unittest.TestCase):
+    def test_UNF_ExplicitMethodResolution(self):
+        class A(ccu['NF'],ExplicitMethodResolution):
             pass
 
         with self.assertRaises(AttributeError):
@@ -613,22 +613,22 @@ class TestChildDoesntHaveIt_Unparented_Parenting(unittest.TestCase):
         with self.assertRaises(AttributeError):
             assert A().attribute
 
-    def test_USF_Parenting(self):
-        class A(ccu['SF'],Parenting):
+    def test_USF_ExplicitMethodResolution(self):
+        class A(ccu['SF'],ExplicitMethodResolution):
             pass
 
         assert A().method() == 'StraightForwardUnparented'
         assert A().attribute == 'straight_forward_unparented'
 
-    def test_UO1PHI_Parenting(self):
-        class A(ccu['O1PHI'],Parenting):
+    def test_UO1PHI_ExplicitMethodResolution(self):
+        class A(ccu['O1PHI'],ExplicitMethodResolution):
             pass
 
         assert A().method() == 'OnlyOneParentHasItUnparented'
         assert A().attribute == 'only_one_parent_has_it_unparented'
 
-    def test_UMPHI_Parenting(self):
-        class A(ccu['MPHI'],Parenting):
+    def test_UMPHI_ExplicitMethodResolution(self):
+        class A(ccu['MPHI'],ExplicitMethodResolution):
             pass
 
         with self.assertRaises(ConcurentMethodResolutionError):
@@ -636,17 +636,17 @@ class TestChildDoesntHaveIt_Unparented_Parenting(unittest.TestCase):
         with self.assertRaises(ConcurentMethodResolutionError):
             assert A().attribute
 
-    def test_UD_Parenting(self):
-        class A(ccu['D'],Parenting):
+    def test_UD_ExplicitMethodResolution(self):
+        class A(ccu['D'],ExplicitMethodResolution):
             pass
 
         assert A().method() == 'DiamondGrandparentHasItUnparented'
         assert A().attribute == 'diamond_grandparent_has_it_unparented'
 
 
-class TestChildDoesntHaveIt_Parenting_Unparented(unittest.TestCase):
-    def test_Parenting_UNF(self):
-        class A(Parenting,ccu['NF']):
+class TestChildDoesntHaveIt_ExplicitMethodResolution_Unparented(unittest.TestCase):
+    def test_ExplicitMethodResolution_UNF(self):
+        class A(ExplicitMethodResolution,ccu['NF']):
             pass
 
         with self.assertRaises(AttributeError):
@@ -654,22 +654,22 @@ class TestChildDoesntHaveIt_Parenting_Unparented(unittest.TestCase):
         with self.assertRaises(AttributeError):
             assert A().attribute
 
-    def test_Parenting_USF(self):
-        class A(Parenting,ccu['SF']):
+    def test_ExplicitMethodResolution_USF(self):
+        class A(ExplicitMethodResolution,ccu['SF']):
             pass
 
         assert A().method() == 'StraightForwardUnparented'
         assert A().attribute == 'straight_forward_unparented'
 
-    def test_Parenting_UO1PHI(self):
-        class A(Parenting,ccu['O1PHI']):
+    def test_ExplicitMethodResolution_UO1PHI(self):
+        class A(ExplicitMethodResolution,ccu['O1PHI']):
             pass
 
         assert A().method() == 'OnlyOneParentHasItUnparented'
         assert A().attribute == 'only_one_parent_has_it_unparented'
 
-    def test_Parenting_UMPHI(self):
-        class A(Parenting,ccu['MPHI']):
+    def test_ExplicitMethodResolution_UMPHI(self):
+        class A(ExplicitMethodResolution,ccu['MPHI']):
             pass
 
         with self.assertRaises(ConcurentMethodResolutionError):
@@ -677,8 +677,8 @@ class TestChildDoesntHaveIt_Parenting_Unparented(unittest.TestCase):
         with self.assertRaises(ConcurentMethodResolutionError):
             assert A().attribute
 
-    def test_Parenting_UD(self):
-        class A(Parenting,ccu['D']):
+    def test_ExplicitMethodResolution_UD(self):
+        class A(ExplicitMethodResolution,ccu['D']):
             pass
 
         assert A().method() == 'DiamondGrandparentHasItUnparented'

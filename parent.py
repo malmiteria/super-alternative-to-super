@@ -14,7 +14,7 @@ def function_caller_frame(function):
             return frame_info.frame.f_back
 
 
-class Parenting:
+class AsParent:
     def __caller_class(self):
         caller_frame = function_caller_frame(self.__as_parent__)
         caller_lnum = caller_frame.f_lineno
@@ -33,6 +33,7 @@ class Parenting:
         ancestor_index = current_mro.index(parent_cls)
         return super(current_mro[ancestor_index - 1], self)
 
+class ExplicitMethodResolution:
     def __getattribute__(self, name):
         if name in ["recur_getattr", "__class__", "__dict__"]:
             return super().__getattribute__(name)
@@ -58,6 +59,8 @@ class Parenting:
             raise AttributeError
         return res
 
+class Parenting(ExplicitMethodResolution, AsParent):
+    pass
 # TODO:
 # adding a __as_class__ which points to the context of the current element.
 # in a method from parent P, __as_class__ is P.
