@@ -49,12 +49,8 @@ class TestAsParentResolution(unittest.TestCase):
         assert list(A().method()) == ['A', 'B', 'C', 'D']
 
     def test_impliciteness_fails_with_multiple_parents(self):
-        class C(AsParent):
-            def method(self):
-                yield 'C'
-        class B(AsParent):
-            def method(self):
-                yield 'B'
+        class C(AsParent): pass
+        class B(AsParent): pass
         class A(B,C):
             def method(self):
                 yield 'A'
@@ -112,9 +108,7 @@ class TestAsParentResolution(unittest.TestCase):
         class C(AsParent):
             def method(self):
                 yield 'C'
-        class B(C):
-            def method(self):
-                yield 'B'
+        class B(C): pass
         class A(B):
             def method(self):
                 yield 'A'
@@ -134,7 +128,6 @@ class TestAsParentResolution(unittest.TestCase):
     def test_cant_target_itself_in_middle_of_tree(self):
         class B(AsParent):
             def method(self):
-                yield 'B'
                 self.__as_parent__(B).method()
         class A(B):
             def method(self):

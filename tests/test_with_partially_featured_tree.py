@@ -76,23 +76,19 @@ class OnlyOneParentHasItUnparented(O1PHIU,O1PHIU1,O1PHIU2,O1PHIU3,O1PHIU4):
 
 class MPHI1(ExplicitMethodResolution):
     attribute = 'multiple_parent_have_it_parented_1'
-    def method(self):
-        return 'MultipleParentHaveItParented1'
+    def method(self): pass
 class MPHI2(ExplicitMethodResolution):
     attribute = 'multiple_parent_have_it_parented_2'
-    def method(self):
-        return 'MultipleParentHaveItParented2'
+    def method(self): pass
 class MultipleParentHaveItParented(MPHI1,MPHI2):
     pass
 
 class MPHI1:
     attribute = 'multiple_parent_have_it_unparented_1'
-    def method(self):
-        return 'MultipleParentHaveItUnparented1'
+    def method(self): pass
 class MPHI2:
     attribute = 'multiple_parent_have_it_unparented_2'
-    def method(self):
-        return 'MultipleParentHaveItUnparented2'
+    def method(self): pass
 class MultipleParentHaveItUnparented(MPHI1,MPHI2):
     pass
 

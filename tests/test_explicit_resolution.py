@@ -80,8 +80,7 @@ class TestMROOnlyOneParentHasIt(unittest.TestCase):
     def test_one_parent_has_it_but_child_has_it_too(self):
         class B(ExplicitMethodResolution):
             attribute = 'b'
-            def method(self):
-                return 'B'
+            def method(self): pass
         class A(B):
             attribute = 'a'
             def method(self):
@@ -95,12 +94,10 @@ class TestMROMultipleParentHaveIt(unittest.TestCase):
     def test_double_inheritance(self):
         class C(ExplicitMethodResolution):
             attribute = 'c'
-            def method(self):
-                return 'C'
+            def method(self): pass
         class B(ExplicitMethodResolution):
             attribute = 'b'
-            def method(self):
-                return 'B'
+            def method(self): pass
         class A(B,C):
             pass
 
@@ -116,12 +113,10 @@ class TestMROMultipleParentHaveIt(unittest.TestCase):
             pass
         class C(ExplicitMethodResolution):
             attribute = 'c'
-            def method(self):
-                return 'C'
+            def method(self): pass
         class B(ExplicitMethodResolution):
             attribute = 'b'
-            def method(self):
-                return 'B'
+            def method(self): pass
         class A(B,C,D,E):
             pass
 
@@ -133,12 +128,10 @@ class TestMROMultipleParentHaveIt(unittest.TestCase):
     def test_two_parent_have_it_but_child_too(self):
         class C(ExplicitMethodResolution):
             attribute = 'c'
-            def method(self):
-                return 'C'
+            def method(self): pass
         class B(ExplicitMethodResolution):
             attribute = 'b'
-            def method(self):
-                return 'B'
+            def method(self): pass
         class A(B,C):
             attribute = 'a'
             def method(self):
@@ -150,12 +143,10 @@ class TestMROMultipleParentHaveIt(unittest.TestCase):
     def test_one_parent_raise_concurent_method_resolution_error(self):
         class D(ExplicitMethodResolution):
             attribute = 'd'
-            def method(self):
-                return 'D'
+            def method(self): pass
         class C(ExplicitMethodResolution):
             attribute = 'c'
-            def method(self):
-                return 'C'
+            def method(self): pass
         class B(C,D):
             pass
         class A(B):
@@ -169,12 +160,10 @@ class TestMROMultipleParentHaveIt(unittest.TestCase):
     def test_one_parent_raise_concurent_method_resolution_error_but_child_has_it(self):
         class D(ExplicitMethodResolution):
             attribute = 'd'
-            def method(self):
-                return 'D'
+            def method(self): pass
         class C(ExplicitMethodResolution):
             attribute = 'c'
-            def method(self):
-                return 'C'
+            def method(self): pass
         class B(C,D):
             pass
         class A(B):
@@ -188,18 +177,15 @@ class TestMROMultipleParentHaveIt(unittest.TestCase):
     def test_one_parent_raise_concurent_method_resolution_error_and_one_parent_has_it(self):
         class E(ExplicitMethodResolution):
             attribute = 'e'
-            def method(self):
-                return 'E'
+            def method(self): pass
         class D(ExplicitMethodResolution):
             attribute = 'd'
-            def method(self):
-                return 'D'
+            def method(self): pass
         class C(D,E):
             pass
         class B(ExplicitMethodResolution):
             attribute = 'b'
-            def method(self):
-                return 'B'
+            def method(self): pass
         class A(B,C):
             pass
 
@@ -228,8 +214,7 @@ class TestMROMultipleParentResolveItFromTheSameGrandparent(unittest.TestCase):
     def test_diamond_shape_but_child_resolves_it(self):
         class D(ExplicitMethodResolution):
             attribute = 'd'
-            def method(self):
-                return 'D'
+            def method(self): pass
         class C(D):
             pass
         class B(D):
@@ -245,12 +230,10 @@ class TestMROMultipleParentResolveItFromTheSameGrandparent(unittest.TestCase):
     def test_diamond_shape_but_one_direct_parent_redefines_it(self):
         class D(ExplicitMethodResolution):
             attribute = 'd'
-            def method(self):
-                return 'D'
+            def method(self): pass
         class C(D):
             attribute = 'c'
-            def method(self):
-                return 'C'
+            def method(self): pass
         class B(D):
             pass
         class A(B,C):
@@ -264,12 +247,10 @@ class TestMROMultipleParentResolveItFromTheSameGrandparent(unittest.TestCase):
     def test_diamond_shape_but_another_parent_resolves_it(self):
         class E(ExplicitMethodResolution):
             attribute = 'e'
-            def method(self):
-                return 'E'
+            def method(self): pass
         class D(ExplicitMethodResolution):
             attribute = 'd'
-            def method(self):
-                return 'D'
+            def method(self): pass
         class C(E):
             pass
         class B(E):
