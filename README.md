@@ -10,7 +10,7 @@ The problems :
 
 A little explanation
 
-1. What is MRO:
+# What is MRO:
 
 Inheritance implies that a child class would inherit parent methods. For example
 ```
@@ -65,7 +65,7 @@ In python, MRO is used to resolve attributes too.
 
 If you are curious to know what the mro of a class is, just print ```<the_class_you're_curious_about>.__mro__```
 
-2. What is super
+# What is super
 
 super is a builtin method that acts as a proxy that can be used when a child class wants to access it's parent class context.
 
@@ -138,7 +138,7 @@ class E(A,D):
 E().method() # prints E A D C D (despite E.__mro__ presenting no duplicates, and A B C order is lost)
 ```
 
-3. The flaws
+# The flaws
 
 The mro as it stands is flawed in five ways in my opinion:
  - the order in which parents of a class A are visited isn't reliable, and can be altered by A's childs, despite the fact that A's definition doesn't involve A's child at all. It is not possible to garantee any mro will be preserved in any context.
@@ -153,7 +153,7 @@ super as it stands is flawed in three ways in my opinion:
  - it doesn't explicitely tell what parent it will access, which can be confusing in case of multiple inheritance
 
 
-4. The good parts
+# The good parts
 
 The mro is a solution to a possible conflict between multiple parents methods. As much as i would prefer the error to not be silenced, a solution should still be provided.
 It works very well for simple cases, and any other solutions should probably do as well on those simple cases.
@@ -165,8 +165,8 @@ It could also be argued that the actual behavior of super could be useful in som
 I would personally argue that such a feature is not related to the core feature of super, could also be considered a flaw as lib maker might wanna lock their classes inheritance trees, and as such, won't be considered something to keep in the solution I'm building.
 
 
-5. What would be an ideal solution
-  1. Explicit Method Resolution:
+# What would be an ideal solution
+## Explicit Method Resolution:
   I think it can be boiled down to those features :
   - *straightforward case* : when a class "A" has a method "method", no matter if A has any parents, A().method should resolve to the method "method" of class "A"
   - *can't be found* : when a class A *doesn't* have a method "method", and *all* it's parent raise a "MethodDoesNotExist" error, A().method should raise a "MethodDoesNotExist" error.
@@ -177,7 +177,7 @@ I would personally argue that such a feature is not related to the core feature 
   a possible extra feature would be :
   - *multiple parent have it, but from the same source (ie. diamond shape inheritance)* : when a class "A" *doesn't* have a method "method", and inherits from multiple parent, at least two of which can resolve a method "method", *and* all of the parent resolving the method "method" from the same, unique grandparent "G", A().method should resolve to the method "method" of the grandparent class "G"
 
-  2. Super alternative to super
+## Super alternative to super
   - *reliability* : should always target the same parent class it is defined to target, no matter what inheritance tree it is a part of.
   - *expliciteness* : in case there is multiple parent classes, should explicitely define which one it targets
   - *impliciteness* : can be implicit when there's only one parent
