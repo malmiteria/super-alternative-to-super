@@ -1,4 +1,4 @@
-from parent import AsParent
+from parent import AsParent, ExplicitenessRequired
 import unittest
 
 
@@ -28,6 +28,40 @@ class TestAsParentResolution(unittest.TestCase):
                 yield from self.__as_parent__(B).method()
 
         assert list(A().method()) == ['A', 'B', 'C']
+
+    def test_impliciteness_multi_layer(self):
+        class D(AsParent):
+            def method(self):
+                yield 'D'
+        class C(D):
+            def method(self):
+                yield 'C'
+                yield from self.__as_parent__().method()
+        class B(C):
+            def method(self):
+                yield 'B'
+                yield from self.__as_parent__().method()
+        class A(B):
+            def method(self):
+                yield 'A'
+                yield from self.__as_parent__().method()
+
+        assert list(A().method()) == ['A', 'B', 'C', 'D']
+
+    def test_impliciteness_fails_with_multiple_parents(self):
+        class C(AsParent):
+            def method(self):
+                yield 'C'
+        class B(AsParent):
+            def method(self):
+                yield 'B'
+        class A(B,C):
+            def method(self):
+                yield 'A'
+                yield from self.__as_parent__().method()
+
+        with self.assertRaises(ExplicitenessRequired):
+            list(A().method())
 
     def test_with_two_parents(self):
         class C(AsParent):
@@ -110,3 +144,26 @@ class TestAsParentResolution(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             list(A().method())
+
+    def test_cant_target_itself_in_middle_of_tree_when_method_is_resolved(self):
+        class B(AsParent):
+            def method(self):
+                self.__as_parent__(B).method()
+        class A(B):
+            pass
+
+        with self.assertRaises(TypeError):
+            list(A().method())
+
+    def test_target_stable_with_implicit_resolution(self):
+        class C(AsParent):
+            def method(self):
+                yield 'C'
+        class B(C):
+            def method(self):
+                yield 'B'
+                yield from self.__as_parent__(C).method()
+        class A(B):
+            pass
+
+        assert list(A().method()) == ['B', 'C']

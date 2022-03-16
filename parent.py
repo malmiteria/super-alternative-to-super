@@ -1,5 +1,8 @@
 import inspect
 
+class ExplicitenessRequired(Exception):
+    pass
+
 class ConcurentMethodResolutionError(Exception):
     pass
 
@@ -23,10 +26,14 @@ class AsParent:
                 continue
             return cls
  
-    def __as_parent__(self, parent_cls):
+    def __as_parent__(self, parent_cls=None):
         caller_cls = self.__caller_class()
         if caller_cls == parent_cls:
             raise TypeError(f"{parent_cls} is not a parent of itself")
+        if parent_cls is None:
+            if len(caller_cls.__bases__) != 1:
+                raise ExplicitenessRequired
+            parent_cls = caller_cls.__bases__[0]
         if parent_cls not in caller_cls.__mro__:
             raise TypeError(f"{parent_cls} is not an ancestor of {caller_cls}. Available options are {caller_cls.__mro__}")
         current_mro = self.__class__.__mro__
