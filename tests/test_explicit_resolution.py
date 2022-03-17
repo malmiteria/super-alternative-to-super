@@ -1,4 +1,4 @@
-from parent import ExplicitMethodResolution, ConcurentMethodResolutionError
+from parent import ExplicitMethodResolution, ConcurentMethodResolutionError, Parenting
 import unittest
 
 
@@ -9,6 +9,40 @@ class TestEMRDontApplyToInstanceAttributes(unittest.TestCase):
                 self.attribute = 'a'
 
         assert A().attribute == 'a'
+
+
+    def test_from_parent(self):
+        class B(ExplicitMethodResolution):
+            def __init__(self):
+                self.attribute = 'a'
+        class A(B):
+            pass
+
+        assert A().attribute == 'a'
+
+
+    def test_from_multiple_parent(self):
+        class C(Parenting):
+            C = 'C'
+            def __init__(self):
+                print('C')
+                self.c = 'c'
+        class B(Parenting):
+            B = 'B'
+            def __init__(self):
+                print('B')
+                self.b = 'b'
+        class A(B,C):
+            def __init__(self):
+                print('A1')
+                self.__as_parent__(B).__init__()
+                print('A2')
+                self.__as_parent__(C).__init__()
+                print('A3')
+
+        a = A()
+        assert a.b == 'b'
+        assert a.c == 'c'
 
 
 class TestMROStraightForward(unittest.TestCase):
