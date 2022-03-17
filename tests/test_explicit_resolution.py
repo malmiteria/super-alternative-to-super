@@ -2,6 +2,15 @@ from parent import ExplicitMethodResolution, ConcurentMethodResolutionError
 import unittest
 
 
+class TestEMRDontApplyToInstanceAttributes(unittest.TestCase):
+    def test(self):
+        class A(ExplicitMethodResolution):
+            def __init__(self):
+                self.attribute = 'a'
+
+        assert A().attribute == 'a'
+
+
 class TestMROStraightForward(unittest.TestCase):
     def test(self):
         class A(ExplicitMethodResolution):
