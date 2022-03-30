@@ -1,5 +1,4 @@
 
-
 current state of MRO + super is being used in multiple ways.
 No explicit feature is isolated for any of those use cases.
 
@@ -41,13 +40,15 @@ Essentially, they compromise for the extra feature, which in the context of a la
 =====
 
 
+# Why am i here?
+
 What motivated me first here was the few problems with the feature 1 (proxying the parent) and feature 4 (method resolution) which I consider to be suboptimal.
 Of course, the different use cases made out of the current super + MRO should be preserved.
 Essentially, I do *not* intend to lose any strength / any use case of the langage
 Listing all the use cases made out of current super + MRO matters then. And I think i already cover the most important ones with the 4 features i described.
 If you feel I'm missing something, please let me know.
 
-My goal :
+## My goal :
 essentially, producing features for parent proxying and method resolution that wouldn't exhibit the flaws of their current version is my goal.
 I also (of course) wanna preserve all current use case made out of the current version.
 Since MRO is the base building block on which super relies, and MRO + super are the bases for those extra feature, it follows that I need to provide alternative for those feature.
@@ -79,3 +80,114 @@ Essentially : produce alternatives to feature 1 2 and 3 (most urgently 2 and 3) 
 
 ===
 From now, I'll try to tackle down each feature individually.
+
+
+
+
+====
+#code examples:
+
+##diamond tree, repeat top
+```
+class HighGobelin:
+    def scream(self):
+        print("raAaaaAar")
+
+class CorruptedGobelin(HighGobelin):
+    def scream(self):
+        print("my corrupted soul makes me wanna scream")
+        super().scream()
+
+class ProudGobelin(HighGobelin):
+    def scream(self):
+        print("I ... can't ... contain my scream!")
+        super().scream()
+
+
+class HalfBreed(ProudGobelin, CorrupteGobelin):
+    def scream(self):
+        # 50% chance to call ProudGobelin scream, 50% chance to call CorruptedGobelin scream
+```
+
+when writing down the class HalfBreed, we expect the behavior of HalfBreed().scream() to be one of its parent behavior, selected at random with 50% chance each.
+with the use of super, it could look like that, intuitively
+
+
+```
+class HalfBreed(ProudGobelin, CorrupteGobelin):
+    def scream(self):
+        if random.choices([True, False]):
+            super(HalfBreed, self).scream()
+        else:
+            super(ProudGobelin, self).scream()
+```
+However, super(HalfBreed, self) does not deliver ProudGoeblin behavior, but a mix of ProudGobelin, CorrupteGobelin, and HighGobelinBehavior.
+
+We would expect the output to be : 
+
+"I ... can't ... contain my scream!"
+"raAaaaAar"
+
+But it is :
+
+"I ... can't ... contain my scream!"
+"my corrupted soul makes me wanna scream"
+"raAaaaAar"
+
+Getting the correct behavior requires to let go of super, in such a way:
+
+
+```
+class HalfBreed(ProudGobelin, CorrupteGobelin):
+    def scream(self):
+        if random.choices([True, False]):
+            ProudGobelin.scream(self)
+        else:
+            CorrupteGobelin.scream(self)
+```
+
+Which is an option multiple of you pointed out to me.
+This options however is flawed in muliple ways, mainly because it looses 3 of the 4 features i describe earlier.
+ - we lose the proxy feature, which to be fair, is aqueen to syntactic sugar. But this is still a feature loss.
+ - we lose the sideway specialisation, coming from super's behavior, which, in this case, is the goal, so we're not complaining.
+ - we lose the possibility of class dependency injection, since today, it relies on a consistent use of super.
+
+As some of you mentionned (with silent pain, for some of you ;) ), loss of feature is a big problem. I think at least for this scenario, assuming that we indeed managed to produce an alternative to all those feature, we are gaining the feature you are defending, not losing it.
+
+## Can't assume on parent's more specialised.
+
+```
+class Glider:
+    def push(self)
+        print("I can't move so good on the ground")
+
+    def jump(self):
+        print("I'm free! I can fly now!")
+
+class Wheel:
+    def push(self)
+        print("let's roll !")
+
+    def jump(self):
+        print("oh damn, i'm falling fast!")
+
+class WheelGlider(Wheel, Glider):
+    def push(self)
+        # calls Wheel push method first
+        # calls Glider push method second
+
+    def jump(self):
+        # calls Glider push method first
+        # calls Wheel push method second
+```
+
+In this example, we expect WheelGlider push method to output :
+"let's roll !"
+"I can't move so good on the ground"
+
+and we expect WheelGlider jump method to output :
+"I'm free! I can fly now!"
+"oh damn, i'm falling fast!"
+
+
+#TODO: show solution with super, talk about refactoring with adding parent classes, weird API, class.method option with its loss of features
