@@ -85,9 +85,13 @@ From now, I'll try to tackle down each feature individually.
 
 
 ====
-#code examples:
+# code examples:
 
-##diamond tree, repeat top
+## diamond tree, repeat top
+CONTEXT : This exemple makes use of today's features.
+No replacement feature is used there
+The goal is to showcase today's behavior, and add my remarks.
+
 ```
 class HighGobelin:
     def scream(self):
@@ -155,6 +159,9 @@ This options however is flawed in muliple ways, mainly because it looses 3 of th
 As some of you mentionned (with silent pain, for some of you ;) ), loss of feature is a big problem. I think at least for this scenario, assuming that we indeed managed to produce an alternative to all those feature, we are gaining the feature you are defending, not losing it.
 
 ## Can't assume on parent's more specialised.
+CONTEXT : This exemple makes use of today's features.
+No replacement feature is used there
+The goal is to showcase today's behavior, and add my remarks.
 
 ```
 class Glider:
@@ -172,7 +179,7 @@ class Wheel:
         print("oh damn, i'm falling fast!")
 
 class WheelGlider(Wheel, Glider):
-    def push(self)
+    def push(self):
         # calls Wheel push method first
         # calls Glider push method second
 
@@ -190,4 +197,163 @@ and we expect WheelGlider jump method to output :
 "oh damn, i'm falling fast!"
 
 
-#TODO: show solution with super, talk about refactoring with adding parent classes, weird API, class.method option with its loss of features
+this could be achieved in such a way:
+```
+class WheelGlider(Wheel, Glider):
+    def push(self):
+        super().push()
+        super(Wheel, self).push()
+
+    def jump(self):
+        super(Wheel, self).jump()
+        super().jump()
+```
+
+This raises a lot of questions
+ - how do those jump and push method behave in case Wheel and Glider are refactored to inherit from a parent?
+   - If this refactoring introduces the diamond case, we're back at the problem showcased in the diamond tree example
+   - If no diamond case (no parent is shared by both, no matter how deep in the inheritance tree), then it would behave consistently with what's expected now.
+ - How do those jump and push method behave in case WheelGlider is used as a parent of another class, which might or might not inherit from Wheel or Glider?
+ - The API here is suboptimal, to say the least, since we have to pass arguments to super that will then be processed for us to reach our target. super(Wheel, self) proxies Glider, which is far from being obvious.
+ - How does one uses all the features of super + MRO here? I don't see a case where you'd want sideway specialisation in this scenario, but it doesn't mean it wouldn't happen. But what about dependency injection / inheritance tree alteration?
+
+Let's investigate :
+Let's say you wanna make use of dependency injection to mock WheelGlider parents in a unit test setting.
+The way to reach this goal today is simple, make use of super "weird" behavior in diamond scenario cases to inject your class in the middle.
+
+```
+class MockedWheel(Wheel):
+    def push(self):
+        print("mocked wheel push")
+    def jump(self):
+        print("mocked wheel jump")
+
+class MockedGlider(Glider):
+    def push(self):
+        print("mocked glider push")
+    def jump(self):
+        print("mocked glider jump")
+
+class MockedWheelGlider(WheelGlider, MockedWheel, MockedGlider):
+d    def push(self):
+        print("mocked WG push")
+        super().push()
+    def jump(self):
+        print("mocked WG jump")
+        super().jump()
+```
+
+To get some bird eye view of this inheritance tree, we know MRO will order it like that:
+(1) MockedWheelGlider < WheelGlider < MockedWheel < MockedGlider
+(2) WheelGlider < Wheel < Glider
+(3) MockedWheel < Wheel
+(4) MockedGlider < Glider
+
+after a quick sandbox test, the complete mro is:
+MockedWheelGlider < WheelGlider < MockedWheel < Wheel < MockedGlider < Glider (< object)
+
+This happens to work fine:
+```
+MockedWheelGlider.jump() # prints "mocked WG jump", then "mocked glider jump", then "mocked wheel jump"
+MockedWheelGlider.push() # prints "mocked WG push", then "mocked wheel push", then "mocked glider push"
+```
+
+If one of the super were replaced by the class.method approach, the MockedWheelGlider would fail to fully mock Wheel and Glider.
+But as far as i'm concerned, this feature is quite robust in this scenario (when super is consistently used).
+
+For deeper inheritance tree alteration, such as removing a branch (can be done by messing with __bases__), they could break some super calls (which is to be expected anyways)
+
+
+## Way too big combinatory possibilities
+CONTEXT : This exemple makes use of today's features.
+No replacement feature is used there
+The goal is to showcase today's behavior, and add my remarks.
+
+let's say you're making a web framework.
+
+You might wanna provide a few View classes:
+
+```
+class View:
+    def render(self):
+        # does some generic view stuff
+        print("view")
+class ListView(View):
+    def render(self):
+        # does some list view specific stuff
+        print("list view")
+        super().render()
+class FormView(View):
+    def render(self):
+        # does some form view specific stuff
+        print("list view")
+        super().render()
+```
+
+That's just an example, but you might get more of those View classes depending on the scenarios you wanna cover
+
+You might also end up providing more features, that relate to the View, such as a LoginRequiredMixin, and a PermissionMixin
+```
+class LoginRequiredMixin:
+    def render(self):
+        # does login specific stuff
+        super().render() # notice the call to super, despite the class not having parents
+
+class PermissionMixin:
+    def render(self):
+        # does permission specific stuff
+        super().render() # notice the call to super, despite the class not having parents
+```
+
+Again, those are just examples, you might end up needing more of those mixins.
+
+Now, each View class would benefit from a variant with the permission mixin's behavior, a variant with the login required mixin, and a variant with both.
+Add more mixins, and the combinatory explodes. And you'd want to produce all those classes variant for each View classes.
+
+The "proper" way to produce those variant would be through inheritance. After all, those variant are simply "more specialised" variants of the base class.
+In order to do it, you would have to produce a LoginRequiredView which inherit from View, a PermissionView inheriting from View, and a LoginRequiredPermissionView which would maybe inherit from PermissionView?
+
+But the problem would then be, how do you not repeat yourself a million time, writting down the login specialisation code in each variant that requires it?
+You can't really, if you wanna stick with inheritance at this stage.
+
+
+However, the use of mixin, such as describe in the code blocks allows a DRY approach, if used correctly by whoever integrates those classes later on.
+
+For an end user, such an integration could look like:
+
+```
+class MyView(LoginRequiredMixin, PermissionMixin, View):
+    # would call render in some appropriate method, but not necesserly redefine it.
+```
+
+which would provide the expected behavior, with no need for the framework editor to produce all the possible combination, and allows for a DRY approach.
+
+
+Essentially tho, this is a use case of multiple inheritance to provide the behavior of what really could have been simple inheritance.
+
+The inheritance tree in this scenario is:
+
+Login    Permission    View
+
+     \        |       /
+
+           MyView
+
+When it fact it was meant to be
+
+View
+  |
+Permission
+  |
+Login
+  |
+MyView
+
+
+The practical reason is valid however, it is to me a symptom of a missing feature.
+
+Turns out it is not possible today (or at least, not properly integrated in the langage) for a class to be defined without knowing its parent, and later on to be attribute parents.
+It is also not possible to define deep layers of it's inheritance tree when defining it.
+I'll be making a proposal for that later on.
+
+
