@@ -7,13 +7,13 @@ Let's list those feature. I'll dive in more depth about illustrating them, and m
 feature 1 (of super alone): proxying the parent.
 What most people think super does (and expect it to do):
 it allows to call method from *the* (most people don't think of multiple inheritance) parent.
-It can be used by working around MRO to proxy any parent directly. 
+It can be used by working around MRO to proxy any parent directly.
 I'd argue this isn't reliable, which makes it an incomplete feature, but that's still a use made of super
 If i had to specify only one problem i have with super today :
  it's use in simple inheritance hints at a behavior of super, which turns out to be widely different from its actual behavior.
  a feature more consistent on that regard would make the langage much easier to learn, for everyone.
 
-feature 2 (of super + MRO): sideway specialization
+feature 2 (of super + MRO): sideway specialization / mixins
 It however can jump sideways in the inheritance tree.
 allowing for same level class to still specialize one another.
 For this scenario, today, we rely on the order in which class are inherited.
@@ -27,10 +27,6 @@ when trying to resolve a method / attribute of a class, if not present in its de
 If no parent can resolve it, you get the attribute error, if at least one does, you get it.
 I'd argue that it makes it possible to silently ignore a parent method when multiple parent define such a method. Which makes it especially painfull to debug those scenarios, which makes it an incomplete feature.
 On top of that, it renders some class definition invalid, when really, the method resolution shouldn't break more than the method resolution. This should be a gettribute error, not a class definition error.
-
-
-I want everyone to take some time to realise that today's sideway specialization relies on the method resolution algorithm. Those feature should have nothing in common. One if for attribute lookup, one is essentially a glorified decorator
-Same can be said about dependency injection / inheritance tree alteration.
 
 
 Also, as mentionned, i'd argue that some of those feature aren't fully delivering what they promise.
@@ -78,13 +74,6 @@ feature 4 (method resolution)
 Essentially : produce alternatives to feature 1 2 and 3 (most urgently 2 and 3) without removing the current version of those feature, then the alternative to feature 4 can be done, which would be the *only* breaking change 
 
 
-===
-From now, I'll try to tackle down each feature individually.
-
-
-
-
-====
 # code examples:
 
 ## diamond tree, repeat top
@@ -156,7 +145,7 @@ This options however is flawed in muliple ways, mainly because it looses 3 of th
  - we lose the sideway specialisation, coming from super's behavior, which, in this case, is the goal, so we're not complaining.
  - we lose the possibility of class dependency injection, since today, it relies on a consistent use of super.
 
-As some of you mentionned (with silent pain, for some of you ;) ), loss of feature is a big problem. I think at least for this scenario, assuming that we indeed managed to produce an alternative to all those feature, we are gaining the feature you are defending, not losing it.
+As some of you mentionned (with pain and agony, for some of you ;) ), loss of feature is a big problem. I think at least for this scenario, assuming that we indeed managed to produce an alternative to all those feature, we are gaining the feature you are defending, not losing it.
 
 ## Can't assume on parent's more specialised.
 CONTEXT : This exemple makes use of today's features.
@@ -263,6 +252,9 @@ But as far as i'm concerned, this feature is quite robust in this scenario (when
 
 For deeper inheritance tree alteration, such as removing a branch (can be done by messing with __bases__), they could break some super calls (which is to be expected anyways)
 
+Other than that, I would argue that for the sake of symetry, it would probably be preferable for super to allow / disallow the exact same API for the use of super, no matter the parent it targets.
+Since in this scenario, we explicitely *don't* think of one parent as coming after the other (in term of specialisation, that is), it shows a disconnect between the feature and its use. Which i take as a hint that there is a feature to produce to match this need more accurately.
+
 
 ## Way too big combinatory possibilities
 CONTEXT : This exemple makes use of today's features.
@@ -352,8 +344,174 @@ MyView
 
 The practical reason is valid however, it is to me a symptom of a missing feature.
 
-Turns out it is not possible today (or at least, not properly integrated in the langage) for a class to be defined without knowing its parent, and later on to be attribute parents.
+Turns out it is not possible today (or at least, not properly integrated in the langage) for a class to be defined without knowing its parent, and later on to be attributed parents.
 It is also not possible to define deep layers of it's inheritance tree when defining it.
 I'll be making a proposal for that later on.
+
+
+
+
+# Let's talk about the features
+
+## Proxying the parent
+
+### Today
+CONTEXT : I'm talking here *exclusively* about the parent proxying feature.
+I will talk about the other features I mentionned later on.
+I'm describing the current state of this feature, to the best of my understanding.
+
+
+This feature allows to proxy a class, which render it's method (and attributes to some extent) accessible from the parent to the child, "as" the parent.
+
+```
+class Dad:
+    def say_hi(self):
+        print("Good morning")
+
+class Child(Dad):
+    def say_hi(self):
+        print("....")
+        super().say_hi("Good morning")
+```
+
+This is a way to access the parent method as if through an instance of it.
+
+It is made to be used inside class method definitions, more than anything else, but can be used to define child attribute based on parent attributes.
+
+```
+class Dad:
+    age = 100
+
+class Son(Dad):
+    # super().age fails with a RuntimeError (no argument)
+    # super(Son, Son) fails here with a NameError (Son is not defined yet)
+    pass
+
+Son.age = super(Son, Son).age - 30
+```
+
+The 'syntactic sugar' aspect of super's proxying feature is that calls to parent methods through super don't require to pass the instance as first argument, which makes for less redundant code.
+
+There is a 'disconnect' between the argument passed to super (when needed) and the class it will target to be a proxy of.
+super(Son) is not a proxy of class Son, it is a proxy on the next in MRO (it feels redundant saying MRO order, but weird just saying in MRO ...) So in cases where the automatic solve of the argumentless super doesn't suits our needs, such as in the exemples above, there is some mental gymnastic, and knowledge to be known to reach our goal.
+
+### My proposal
+CONTEXT : I propose an alternative to this proxying feature
+This is not a final product, and your inputs are welcomed.
+It is an alternative *exclusively* to the proxying feature.
+
+I think the replacement to the proxying feature should:
+ - Accept for argument the class it wants to be a proxy of (and eventually, self, too).
+ - Allow for argumentless syntax in case of simple inheritance. (Since in this scenario, the only parent present is the only possible target)
+ - Require argument in case of multiple inheritance
+ - Account for possible remapping of a parent. In this case the targeted class would be the remap of the class passed as an argument.
+ - Be allowed to target any class higher in the inheritance tree, not only direct parents.
+
+
+For the sake of illustration, let's call this replacment ```__as_parent__``` but at the end of the day, the name 'super' is fine, it will just make it easier to understand what code is an example of my alternative, and what code is a description of today's state.
+and let's assume it can take two optional arguments, first a class, second an instance.
+
+
+This is a showcase of a simple case:
+```
+class Dad:
+    age = 100
+    def say_hi(self):
+        print("back in my days...")
+
+class Son(Dad):
+    age = __as_parent__(Dad).age - 30 # Dad is already defined here, so no problem
+    def say_hi(self):
+        print("i'm not that old... yet...")
+        __as_parent__().say_hi()
+```
+
+as you can see, __as_parent__ works basically the same as super here (in term of proxying only), except maybe for this little bonus ability to be used for class attribute (not that it's a common need). 
+
+Let's look at how the different examples I described earlier would change with this new version:
+
+#### Diamond tree, with a top non repeated
+CONTEXT : This is a showcase of the proxying feature such as i intend it.
+I'm under the assumption there is an alternative to all other features.
+
+```
+class HighGobelin:
+    def scream(self):
+        print("raAaaaAar")
+
+class CorruptedGobelin(HighGobelin):
+    def scream(self):
+        print("my corrupted soul makes me wanna scream")
+        __as_parent__().scream()
+
+class ProudGobelin(HighGobelin):
+    def scream(self):
+        print("I ... can't ... contain my scream!")
+        __as_parent__().scream()
+
+class HalfBreed(ProudGobelin, CorrupteGobelin):
+    def scream(self):
+        # 50% chance to call ProudGobelin scream, 50% chance to call CorruptedGobelin scream
+        if random.choices([True, False]):
+            __as_parent__(ProudGobelin, self).scream()
+        else:
+            __as_parent__(CorrupteGobelin, self).scream()
+```
+
+This allows what we couldn't do with the old style super, in a pretty simple way.
+
+
+Of course now, if you'd want a diamond case scenario which would call the grandparent method only once... You can't.
+
+Oh and, there's no way to use the class.method syntax to get around this problem here.
+
+No matter what strategy you choose, either call every time, or call only once, you'll end up making the other scenario impossible.
+
+Except of course if we were to introduce a new feature that would allow developpers to choose that strategy.
+
+We can think of a few things, but I don't have a solution for that yet. This is starting to be a big post, so i'll dive into that one at a later time.
+Quickly tho :
+ An enum could list all poossible behavior, we might want more than the 'call me on my last appearance' and 'call me every time' behaviors.
+ It would be relevant to the overall attempt at unlinking the 4 features here, and super and MRO in more general term, to make this feature non reliant on super or MRO. Inspecting the inheritance tree first to spot the calls we wanna mute before actually running the call can be an option, the remap feature could be used to remap those call to a Mute object, either through today's use of dependency injection or my alternative __as_parent__ accounting for a remap.
+
+
+
+
+#### Can't assume on parent's more specialised.
+CONTEXT : This is a showcase of the proxying feature such as i intend it.
+I'm under the assumption there is an alternative to all other features.
+
+```
+class Glider:
+    def push(self)
+        print("I can't move so good on the ground")
+
+    def jump(self):
+        print("I'm free! I can fly now!")
+
+class Wheel:
+    def push(self)
+        print("let's roll !")
+
+    def jump(self):
+        print("oh damn, i'm falling fast!")
+
+class WheelGlider(Wheel, Glider):
+    def push(self):
+        # calls Wheel push method first
+        # calls Glider push method second
+        __as_parent__(Wheel, self).push()
+        __as_parent__(Glider, self).push()
+
+    def jump(self):
+        # calls Glider push method first
+        # calls Wheel push method second
+        __as_parent__(Glider, self).jump()
+        __as_parent__(Wheel, self).jump()
+```
+
+As you can see, this is trivial.
+
+#### Too big combinatory
 
 
