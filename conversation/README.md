@@ -17,6 +17,7 @@ feature 2 (of super + MRO): sideway specialization / mixins
 It however can jump sideways in the inheritance tree.
 allowing for same level class to still specialize one another.
 For this scenario, today, we rely on the order in which class are inherited.
+This is usefull when for some reason it is not possible to make a class inherit from another at definition time.
 
 feature 3 (of super + MRO): dependency injection / inheritance tree alteration
 If you wanna inject a class wherever in some pre existing class inheritance tree, you can through the use of some clever new classes.
@@ -29,11 +30,12 @@ I'd argue that it makes it possible to silently ignore a parent method when mult
 On top of that, it renders some class definition invalid, when really, the method resolution shouldn't break more than the method resolution. This should be a gettribute error, not a class definition error.
 
 
+"feature" 5 : diamond problem.
+Not really a feature, more a lack of feature. Today's diamond problem is solved by making the top layer appear only once in scpecialisation, which is a direct consequence of ordering the inheritance tree. Whatever changes we decide on the 4 previous features, the impact on the diamond problem will either be null, or make the top layer be specialsed by all it's chilren. Either strategies aren't covering all needs. This requires an extra dedicated feature.
+
 Also, as mentionned, i'd argue that some of those feature aren't fully delivering what they promise.
 Essentially, they compromise for the extra feature, which in the context of a lack of properly isolated implementation for those feature seems fair.
 
-
-=====
 
 
 # Why am i here?
@@ -354,11 +356,11 @@ I'll be making a proposal for that later on.
 # Let's talk about the features
 
 ## Proxying the parent
-
-### Today
 CONTEXT : I'm talking here *exclusively* about the parent proxying feature.
-I will talk about the other features I mentionned later on.
+I will talk about the other features on their dedicated sections.
 I'm describing the current state of this feature, to the best of my understanding.
+I'll also add my remarks on what we would wanna keep / get rid of for an optimal feature.
+But i am not at this point proposing an alternative.
 
 
 This feature allows to proxy a class, which render it's method (and attributes to some extent) accessible from the parent to the child, "as" the parent.
@@ -390,97 +392,117 @@ class Son(Dad):
 Son.age = super(Son, Son).age - 30
 ```
 
-The 'syntactic sugar' aspect of super's proxying feature is that calls to parent methods through super don't require to pass the instance as first argument, which makes for less redundant code.
+The 'syntactic sugar' aspect of super's proxying feature is that calls to parent methods through super don't require to pass the instance as first argument, which makes for less redundant code. This should be kept in the alternative feature.
 
 There is a 'disconnect' between the argument passed to super (when needed) and the class it will target to be a proxy of.
-super(Son) is not a proxy of class Son, it is a proxy on the next in MRO (it feels redundant saying MRO order, but weird just saying in MRO ...) So in cases where the automatic solve of the argumentless super doesn't suits our needs, such as in the exemples above, there is some mental gymnastic, and knowledge to be known to reach our goal.
+super(Son) is not a proxy of class Son, it is a proxy on the next in MRO (it feels redundant saying MRO order, but weird just saying in MRO ...) So in cases where the automatic solve of the argumentless super doesn't suits our needs, such as in the exemples above, there is some mental gymnastic, and knowledge to be known to reach our goal. This should be simplified in the alternative feature.
 
-### My proposal
-CONTEXT : I propose an alternative to this proxying feature
-This is not a final product, and your inputs are welcomed.
-It is an alternative *exclusively* to the proxying feature.
+The possiblity of calling super with no argument is quite handy, and should probably be kept too.
 
-I think the replacement to the proxying feature should:
- - Accept for argument the class it wants to be a proxy of (and eventually, self, too).
- - Allow for argumentless syntax in case of simple inheritance. (Since in this scenario, the only parent present is the only possible target)
- - Require argument in case of multiple inheritance
- - Account for possible remapping of a parent. In this case the targeted class would be the remap of the class passed as an argument.
- - Be allowed to target any class higher in the inheritance tree, not only direct parents.
+In case of multiple inheritence, the argumentless expression of super does lack explicitness to me. I would wanna make the use of the alternative more explicit, in this scenario.
 
-
-For the sake of illustration, let's call this replacment ```__as_parent__``` but at the end of the day, the name 'super' is fine, it will just make it easier to understand what code is an example of my alternative, and what code is a description of today's state.
-and let's assume it can take two optional arguments, first a class, second an instance.
+TLDR:
+ - keep :
+  - syntactic sugar
+  - argumentless option in case of simple inheritance
+ - don't keep:
+  - argument and proxy target being not the same
+  - argumentless syntax in multiple inheritance
 
 
-This is a showcase of a simple case:
+## Sideway specialisation / Mixins
+CONTEXT : I'm talking here *exclusively* about the sideway specialisation / mixin feature.
+I will talk about the other features on their dedicated sections.
+I'm describing the current state of this feature, to the best of my understanding.
+I'll also add my remarks on what we would wanna keep / get rid of for an optimal feature.
+But i am not at this point proposing an alternative.
+
+
+Today, it is possible to have a class designed to inherite from another, but without having it explicitely inherit from it, when defined.
+
+This is useful in case the specialistion class should be applied to multiple base class, especially when more specialisation classes exists, and all combination of the specialisations should be provided.
+This is showcased in the "way too many combinatory" exemple i gave earlier.
+
+If you have those base classes :
 ```
-class Dad:
-    age = 100
-    def say_hi(self):
-        print("back in my days...")
+class View1:
+    def render(self):
+        # ...
 
-class Son(Dad):
-    age = __as_parent__(Dad).age - 30 # Dad is already defined here, so no problem
-    def say_hi(self):
-        print("i'm not that old... yet...")
-        __as_parent__().say_hi()
-```
+...
 
-as you can see, __as_parent__ works basically the same as super here (in term of proxying only), except maybe for this little bonus ability to be used for class attribute (not that it's a common need). 
-
-Let's look at how the different examples I described earlier would change with this new version:
-
-#### Diamond tree, with a top non repeated
-CONTEXT : This is a showcase of the proxying feature such as i intend it.
-I'm under the assumption there is an alternative to all other features.
-
-```
-class HighGobelin:
-    def scream(self):
-        print("raAaaaAar")
-
-class CorruptedGobelin(HighGobelin):
-    def scream(self):
-        print("my corrupted soul makes me wanna scream")
-        __as_parent__().scream()
-
-class ProudGobelin(HighGobelin):
-    def scream(self):
-        print("I ... can't ... contain my scream!")
-        __as_parent__().scream()
-
-class HalfBreed(ProudGobelin, CorrupteGobelin):
-    def scream(self):
-        # 50% chance to call ProudGobelin scream, 50% chance to call CorruptedGobelin scream
-        if random.choices([True, False]):
-            __as_parent__(ProudGobelin, self).scream()
-        else:
-            __as_parent__(CorrupteGobelin, self).scream()
+class View10:
+    def render(self):
+        # ...
 ```
 
-This allows what we couldn't do with the old style super, in a pretty simple way.
+And those specilaser mixins:
+```
+class Spec1:
+    def render(self):
+        # ...
+        super().render()
+        # ...
+
+...
 
 
-Of course now, if you'd want a diamond case scenario which would call the grandparent method only once... You can't.
+class Spec10:
+    def render(self):
+        # ...
+        super().render()
+        # ...
+```
 
-Oh and, there's no way to use the class.method syntax to get around this problem here.
+The amount of combination is insanely huge, something like, if i'm not mistaken:
 
-No matter what strategy you choose, either call every time, or call only once, you'll end up making the other scenario impossible.
+for n in range(amount of spec):
+    (amount of views) * [(amount of specs)!/(n!)]
 
-Except of course if we were to introduce a new feature that would allow developpers to choose that strategy.
+which in this case gives 62353000
+Anyone attempting to manually do that would be insane. Obviouly, it's rare to have 10 specs, but the number is still high with 3 specs : 90
+More accessible, but definitely not a fun task
 
-We can think of a few things, but I don't have a solution for that yet. This is starting to be a big post, so i'll dive into that one at a later time.
-Quickly tho :
- An enum could list all poossible behavior, we might want more than the 'call me on my last appearance' and 'call me every time' behaviors.
- It would be relevant to the overall attempt at unlinking the 4 features here, and super and MRO in more general term, to make this feature non reliant on super or MRO. Inspecting the inheritance tree first to spot the calls we wanna mute before actually running the call can be an option, the remap feature could be used to remap those call to a Mute object, either through today's use of dependency injection or my alternative __as_parent__ accounting for a remap.
+How is it done then? Through multiple inheritance.
+```
+class MyView(Spec1, Spec4, View3):
+    pass
+```
+is a class that inherits from what would have been the combination Spec1 inherits from Spec4 inherits from View3, would it have been possible to define such inheritance between the specs and view.
+Since MRO in this case is MyView < Spec1 < Spec4 < View3, any call to super from Spec1 will proxy Spec4, and any call to super from Spec4 will proxy View3.
 
 
+Today's super allows to provide all those combinations, without having to explicitely define any combination
+This feature is a must keep
+
+I would argue tho, that today's solution produces a multiple inheritance tree, when all it need in fact is a simple inheritance tree.
+It essentially "forget" about the inheritance it meant to provide, but falls back into working thanks to the ability of super to side jump.
+An alternative would probably benefit from rendering the inheritance feature explicit. Today, those scenarios are simply denying the inheritance they really meant to benefit from. Let's make them actual inheritance.
+
+I would also argue that multiple the inheritance syntax is definitely not appropriate, as it is very not clearly keeping track of the order of classes the child inherits from.
+I've seen people try to reorder the classes in such a scenario, because it was weird to them to have mixins come after the view class. Which is the most important one, so they felt it made sense to have it placed first. Of course our automated tests made it clear it wasn't working, but it also means that had we not have tests, testing the mixin features, we would have silently lost this feature.
+And testing those feature was debated in our team, since those are essentially the web framework responsibility, not ours.
+I can see this bug reaching production for this reason.
+As much as this is an UX consideration, this is definitely a must get rid of. An alternative should be designed to make it clear there is an order.
+
+TLDR:
+ - keep:
+  - Not having to explicitely define all combinations of (n) mixins + feature class
+ - don't keep:
+  - Loss of simple inheritance when it's the dedicated feature for this need
+  - Current UX for this scenario lack of explicit order
 
 
-#### Can't assume on parent's more specialised.
-CONTEXT : This is a showcase of the proxying feature such as i intend it.
-I'm under the assumption there is an alternative to all other features.
+## Dependency injection / inheritance tree alteration
+CONTEXT : I'm talking here *exclusively* about the dependency injection / inheritance tree alteration feature.
+I will talk about the other features on their dedicated sections.
+I'm describing the current state of this feature, to the best of my understanding.
+I'll also add my remarks on what we would wanna keep / get rid of for an optimal feature.
+But i am not at this point proposing an alternative.
 
+
+Today's MRO + super allows for dependency injection.
+Let's take the "Can't assume on parent's more specialised." example:
 ```
 class Glider:
     def push(self)
@@ -498,20 +520,343 @@ class Wheel:
 
 class WheelGlider(Wheel, Glider):
     def push(self):
-        # calls Wheel push method first
-        # calls Glider push method second
-        __as_parent__(Wheel, self).push()
-        __as_parent__(Glider, self).push()
+        super().push()
+        super(Wheel, self).push()
 
     def jump(self):
-        # calls Glider push method first
-        # calls Wheel push method second
-        __as_parent__(Glider, self).jump()
-        __as_parent__(Wheel, self).jump()
+        super(Wheel, self).jump()
+        super().jump()
 ```
 
-As you can see, this is trivial.
+MRO for WheelGlider here is : WheelGlider < Wheel < Glider
 
-#### Too big combinatory
+This order will never change, however, it is possible to squeeze between any two consecutively ordered classes by making use of a good understanding of MRO:
+
+MockedWheelGlider < WheelGlider < MockedWheel < Wheel < MockedGlider < Glider
+implies:
+WheelGlider < Wheel < Glider
+
+This new order can be obtained with:
+```
+class MockedWheel(Wheel):
+    def push(self):
+        print("mocked wheel push")
+    def jump(self):
+        print("mocked wheel jump")
+
+class MockedGlider(Glider):
+    def push(self):
+        print("mocked glider push")
+    def jump(self):
+        print("mocked glider jump")
+
+class MockedWheelGlider(WheelGlider, MockedWheel, MockedGlider):
+d    def push(self):
+        print("mocked WG push")
+        super().push()
+    def jump(self):
+        print("mocked WG jump")
+        super().jump()
+```
+
+This features essentially allows to reparent any class, anywhere in any inheritance tree, this is definitely a must keep.
+
+I would argue that, as much as this feature is very reliable today, it relies on super and MRO which don't always cover developpers needs. Today's alternative class.method does most definitely not allow for proper dependency injection, as super calls implictely target the next in MRO, and class.method are hardcoded to target the same method no matter MRO, so the dependency injection dependance on super and MRO is a downfall of this feature.
+
+This feature also requires to create a new class, inheriting from the class to inject dependency on, meaning it is not an inplace change.This should probably be kept like that. Although, i guess it doesn't hurt to give the option to the developper to have the change inplace or not.
+
+The current state of this feature UX is quite poor tho, as the amount of knowledge you have to pour into the code to make it work like you'd expect is quite high. Making this feature not accessible to most developpers. The alternative would most definitely benefit from a simpler API.
+
+On the topic of the link between dependency injection and super + MRO, it is important to note that any slight change on MRO + super could have an impact on this feature, essentially locking super and MRO in their current state.
+
+TLDR:
+ - keep:
+  - the ability to reparent any class anywhere in any inheritance tree.
+  - the not inplace change.
+ - don't keep:
+  - the reliance on super + MRO
+  - the amount of knowledge needed to make use of this feature
 
 
+## Method resolution
+CONTEXT : I'm talking here *exclusively* about the method resolution feature.
+I will talk about the other features on their dedicated sections.
+I'm describing the current state of this feature, to the best of my understanding.
+I'll also add my remarks on what we would wanna keep / get rid of for an optimal feature.
+But i am not at this point proposing an alternative.
+
+
+Method resolution is the feature that allow child class to access parent method as if it was their own, assuming they do not override it with a method with the same name.
+```
+class Dad:
+    def joke(self):
+        print("I'm afraid for the calendar. Its days are numbered.")
+
+class Son(Dad):
+    pass
+```
+In this exemple ```Son().joke()``` will resolve to joke method defined in Dad
+
+However:
+```
+class Dad:
+    def joke(self):
+        print("I'm afraid for the calendar. Its days are numbered.")
+
+class Son(Dad):
+    def joke(self):
+        print("*UNO reverse card sound* Hi dad, I'm son.")
+```
+In this exemple ```Son().joke()``` will resolve to the joke method defined in Son
+Had Dad not have a joke method, an AttributeError would have been raised
+
+In case of multiple inheritance, we still want the child to be able to inherit its parent methods.
+```
+class Dad:
+    def joke(self):
+        print("I'm afraid for the calendar. Its days are numbered.")
+
+class Mom:
+    def joke(self):
+        print("What do you call a small mom? Minimum.")
+
+class Son(Dad, Mom):
+    pass
+```
+In this exemple the use of a method resolution *order* comes into play. Since multiple parent have a joke method to provide, and Son method resolution can only resolve to one of them, it is resolved to the first in order capable of delivering the method.
+Here, ```Son().joke()``` resolves to the joke method of Dad.
+Had Mom not have a joke method, nothing would change.
+Had Dad not have a joke method, ```Son().joke()``` would have resolved to the joke method of Mom.
+Had both Mom and Dad not have a joke method, an AttributeError would have been raised
+
+Method resolution is also applied to class attributes. Essentially, a method bound class can be considered a callable attribute of this class, there's no specification of non callable attributes that would make them not need a method resolution algorithm.
+
+
+I would argue that it is less than optimal that one parent method can be silently ignored by the method resolution on the pretext that another parent had a method with the same name "before". In some case, as the mixin case, such an order matches the need, but in the generic case, it is too speicifc of an assumption.
+
+The ability for the child to resolve its parent method should be kept in, obviously (that's what inheritance is in the end)
+However in case of multiple inheritance, and maybe more specifically, multiple resolution, a "manual" merge in the child class definition should be requested.
+This goes for method and attributes, as of today, it is assumed one method is prefered, but other strategies might be the more viable ones. This assumption is something i disagree with. We should allow for multiple strategy, instead of enforcing one, and request a strategy when the default one can't provide a result.
+
+The ability for the child to resolve automatically one of its parent method when only one parent can provide it is a viable default method, and should be kept as the default one, in this scenario.
+
+Today's MRO doesn't allow for all possible class inheritance trees, as some can't be ordered, or would have inconsistent order.
+such as :
+```
+class A: pass
+class B(A): pass # B < A
+class C(A,B): pass # A > B
+```
+
+TLDR:
+ - keep:
+  - resolution on class body method first
+  - resolution implicit on parent method (if not present in own class body) when only one parent has it
+ - don't keep
+  - implicit resolution when multiple parent can resolve it
+  - assumption of an order of parents. One might be more specialised than the other, but does not have to.
+
+
+## Diamond problem
+
+The diamond problem is essentially the question, should methods from a class which appears multiple time in an inheritance tree be called multiple time, or only once.
+Essentially, multiple answers are possible, depending on your specific needs.
+You might wanna want the bottom class inherit from the full behavior of all of it's parent classes, in which case, you'd call the grandparent method each time.
+You might also want the grandparent class method to be called only once, after all other specialisation provided by all the parents.
+
+Today, the only option provided by super + MRO is or the grandparent to be called only once.
+
+I'd argue this is not enough.
+We should be able to chose the strategy ourself, depending on our needs.
+
+The diamond problem illustrate the problem when a class appears multiple time in an inheritance tree, but this shape doesn't have to be diamond.
+
+For example:
+```
+class Top: pass
+
+class Side(Top): pass
+
+class Bottom(Side, Top): pass
+```
+
+TLDR:
+allow for multiple inheritance strategies, instead of enforcing one.
+
+
+## the weird case of __slots__
+Someone mentionned __slots__
+
+I didn't consider it at first, and now i'm weirded out by it.
+(I'm running those exemples in python 3.6, according to more probing on my part, __slots__ behaves differently on python 2.7)
+
+```
+class A:
+    __slots__ = ['a']
+class B:
+    __slots__ = ['b']
+class C(B,A): pass
+```
+This code raises an error:
+TypeError: multiple bases have instance lay-out conflict
+
+Turns out, C doesn't like that A and B both define __slots__
+So, my intuition was that redefining __slots__ in C would fix the issue
+```
+class A:
+    __slots__ = ['a']
+class B:
+    __slots__ = ['b']
+class C(B,A):
+    __slots__ = ['c']
+```
+This raises the exact same error.
+
+Multiple inheritance works for __slots__, at the strict condition that only one parent defines __slots__:
+```
+class A:
+    pass
+class B:
+    __slots__ = ['b']
+class C(B,A):
+    pass
+```
+This doesn't raise an error.
+
+Essentially, it seems the default method resolution, when applied to this __slots__ attribute wasn't satisfactory to whoever built it. They then decided to change the method resolution on this method to not allow implicit method resolution for multiple inheritance.
+But, somehow, redefining __slots__ in the child isn't allowed either. Which should be an option to allows proper method resolution here.
+
+In case of simple inheritance, more strange behavior occur.
+
+```
+class A: __slots__ = ['A']
+class B(A): __slots__ = ['B']
+```
+
+This works, and now, B.__slots__ is equal to ['B']. Over riding works in this case.
+
+I'm assuming this feature is still evolving, and testing in higher version of python would lead to different behaviors.
+
+I feel the current features of method resolution wasn't satisfactory to __slots__, so they implemented their own strategy.
+
+
+//### My proposal
+//CONTEXT : I propose an alternative to this proxying feature
+//This is not a final product, and your inputs are welcomed.
+//It is an alternative *exclusively* to the proxying feature.
+//
+//I think the replacement to the proxying feature should:
+// - Accept for argument the class it wants to be a proxy of (and eventually, self, too).
+// - Allow for argumentless syntax in case of simple inheritance. (Since in this scenario, the only parent present is the only possible target)
+// - Require argument in case of multiple inheritance
+// - Account for possible remapping of a parent. In this case the targeted class would be the remap of the class passed as an argument.
+// - Be allowed to target any class higher in the inheritance tree, not only direct parents.
+//
+//
+//For the sake of illustration, let's call this replacment ```__as_parent__``` but at the end of the day, the name 'super' is fine, it will just make it easier to understand what code is an example of my alternative, and what code is a description of today's state.
+//and let's assume it can take two optional arguments, first a class, second an instance.
+//
+//
+//This is a showcase of a simple case:
+//```
+//class Dad:
+//    age = 100
+//    def say_hi(self):
+//        print("back in my days...")
+//
+//class Son(Dad):
+//    age = __as_parent__(Dad).age - 30 # Dad is already defined here, so no problem
+//    def say_hi(self):
+//        print("i'm not that old... yet...")
+//        __as_parent__().say_hi()
+//```
+//
+//as you can see, __as_parent__ works basically the same as super here (in term of proxying only), except maybe for this little bonus ability to be used for class attribute (not that it's a common need). 
+//
+//Let's look at how the different examples I described earlier would change with this new version:
+//
+//#### Diamond tree, with a top non repeated
+//CONTEXT : This is a showcase of the proxying feature such as i intend it.
+//I'm under the assumption there is an alternative to all other features.
+//
+//```
+//class HighGobelin:
+//    def scream(self):
+//        print("raAaaaAar")
+//
+//class CorruptedGobelin(HighGobelin):
+//    def scream(self):
+//        print("my corrupted soul makes me wanna scream")
+//        __as_parent__().scream()
+//
+//class ProudGobelin(HighGobelin):
+//    def scream(self):
+//        print("I ... can't ... contain my scream!")
+//        __as_parent__().scream()
+//
+//class HalfBreed(ProudGobelin, CorrupteGobelin):
+//    def scream(self):
+//        # 50% chance to call ProudGobelin scream, 50% chance to call CorruptedGobelin scream
+//        if random.choices([True, False]):
+//            __as_parent__(ProudGobelin, self).scream()
+//        else:
+//            __as_parent__(CorrupteGobelin, self).scream()
+//```
+//
+//This allows what we couldn't do with the old style super, in a pretty simple way.
+//
+//
+//Of course now, if you'd want a diamond case scenario which would call the grandparent method only once... You can't.
+//
+//Oh and, there's no way to use the class.method syntax to get around this problem here.
+//
+//No matter what strategy you choose, either call every time, or call only once, you'll end up making the other scenario impossible.
+//
+//Except of course if we were to introduce a new feature that would allow developpers to choose that strategy.
+//
+//We can think of a few things, but I don't have a solution for that yet. This is starting to be a big post, so i'll dive into that one at a later time.
+//Quickly tho :
+// An enum could list all poossible behavior, we might want more than the 'call me on my last appearance' and 'call me every time' behaviors.
+// It would be relevant to the overall attempt at unlinking the 4 features here, and super and MRO in more general term, to make this feature non reliant on super or MRO. Inspecting the inheritance tree first to spot the calls we wanna mute before actually running the call can be an option, the remap feature could be used to remap those call to a Mute object, either through today's use of dependency injection or my alternative __as_parent__ accounting for a remap.
+//
+//
+//
+//
+//#### Can't assume on parent's more specialised.
+//CONTEXT : This is a showcase of the proxying feature such as i intend it.
+//I'm under the assumption there is an alternative to all other features.
+//
+//```
+//class Glider:
+//    def push(self)
+//        print("I can't move so good on the ground")
+//
+//    def jump(self):
+//        print("I'm free! I can fly now!")
+//
+//class Wheel:
+//    def push(self)
+//        print("let's roll !")
+//
+//    def jump(self):
+//        print("oh damn, i'm falling fast!")
+//
+//class WheelGlider(Wheel, Glider):
+//    def push(self):
+//        # calls Wheel push method first
+//        # calls Glider push method second
+//        __as_parent__(Wheel, self).push()
+//        __as_parent__(Glider, self).push()
+//
+//    def jump(self):
+//        # calls Glider push method first
+//        # calls Wheel push method second
+//        __as_parent__(Glider, self).jump()
+//        __as_parent__(Wheel, self).jump()
+//```
+//
+//As you can see, this is trivial.
+//
+//#### Too big combinatory
+//
+//
