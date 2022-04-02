@@ -740,123 +740,256 @@ I'm assuming this feature is still evolving, and testing in higher version of py
 I feel the current features of method resolution wasn't satisfactory to __slots__, so they implemented their own strategy.
 
 
-//### My proposal
-//CONTEXT : I propose an alternative to this proxying feature
-//This is not a final product, and your inputs are welcomed.
-//It is an alternative *exclusively* to the proxying feature.
-//
-//I think the replacement to the proxying feature should:
-// - Accept for argument the class it wants to be a proxy of (and eventually, self, too).
-// - Allow for argumentless syntax in case of simple inheritance. (Since in this scenario, the only parent present is the only possible target)
-// - Require argument in case of multiple inheritance
-// - Account for possible remapping of a parent. In this case the targeted class would be the remap of the class passed as an argument.
-// - Be allowed to target any class higher in the inheritance tree, not only direct parents.
-//
-//
-//For the sake of illustration, let's call this replacment ```__as_parent__``` but at the end of the day, the name 'super' is fine, it will just make it easier to understand what code is an example of my alternative, and what code is a description of today's state.
-//and let's assume it can take two optional arguments, first a class, second an instance.
-//
-//
-//This is a showcase of a simple case:
-//```
-//class Dad:
-//    age = 100
-//    def say_hi(self):
-//        print("back in my days...")
-//
-//class Son(Dad):
-//    age = __as_parent__(Dad).age - 30 # Dad is already defined here, so no problem
-//    def say_hi(self):
-//        print("i'm not that old... yet...")
-//        __as_parent__().say_hi()
-//```
-//
-//as you can see, __as_parent__ works basically the same as super here (in term of proxying only), except maybe for this little bonus ability to be used for class attribute (not that it's a common need). 
-//
-//Let's look at how the different examples I described earlier would change with this new version:
-//
-//#### Diamond tree, with a top non repeated
-//CONTEXT : This is a showcase of the proxying feature such as i intend it.
-//I'm under the assumption there is an alternative to all other features.
-//
-//```
-//class HighGobelin:
-//    def scream(self):
-//        print("raAaaaAar")
-//
-//class CorruptedGobelin(HighGobelin):
-//    def scream(self):
-//        print("my corrupted soul makes me wanna scream")
-//        __as_parent__().scream()
-//
-//class ProudGobelin(HighGobelin):
-//    def scream(self):
-//        print("I ... can't ... contain my scream!")
-//        __as_parent__().scream()
-//
-//class HalfBreed(ProudGobelin, CorrupteGobelin):
-//    def scream(self):
-//        # 50% chance to call ProudGobelin scream, 50% chance to call CorruptedGobelin scream
-//        if random.choices([True, False]):
-//            __as_parent__(ProudGobelin, self).scream()
-//        else:
-//            __as_parent__(CorrupteGobelin, self).scream()
-//```
-//
-//This allows what we couldn't do with the old style super, in a pretty simple way.
-//
-//
-//Of course now, if you'd want a diamond case scenario which would call the grandparent method only once... You can't.
-//
-//Oh and, there's no way to use the class.method syntax to get around this problem here.
-//
-//No matter what strategy you choose, either call every time, or call only once, you'll end up making the other scenario impossible.
-//
-//Except of course if we were to introduce a new feature that would allow developpers to choose that strategy.
-//
-//We can think of a few things, but I don't have a solution for that yet. This is starting to be a big post, so i'll dive into that one at a later time.
-//Quickly tho :
-// An enum could list all poossible behavior, we might want more than the 'call me on my last appearance' and 'call me every time' behaviors.
-// It would be relevant to the overall attempt at unlinking the 4 features here, and super and MRO in more general term, to make this feature non reliant on super or MRO. Inspecting the inheritance tree first to spot the calls we wanna mute before actually running the call can be an option, the remap feature could be used to remap those call to a Mute object, either through today's use of dependency injection or my alternative __as_parent__ accounting for a remap.
-//
-//
-//
-//
-//#### Can't assume on parent's more specialised.
-//CONTEXT : This is a showcase of the proxying feature such as i intend it.
-//I'm under the assumption there is an alternative to all other features.
-//
-//```
-//class Glider:
-//    def push(self)
-//        print("I can't move so good on the ground")
-//
-//    def jump(self):
-//        print("I'm free! I can fly now!")
-//
-//class Wheel:
-//    def push(self)
-//        print("let's roll !")
-//
-//    def jump(self):
-//        print("oh damn, i'm falling fast!")
-//
-//class WheelGlider(Wheel, Glider):
-//    def push(self):
-//        # calls Wheel push method first
-//        # calls Glider push method second
-//        __as_parent__(Wheel, self).push()
-//        __as_parent__(Glider, self).push()
-//
-//    def jump(self):
-//        # calls Glider push method first
-//        # calls Wheel push method second
-//        __as_parent__(Glider, self).jump()
-//        __as_parent__(Wheel, self).jump()
-//```
-//
-//As you can see, this is trivial.
-//
-//#### Too big combinatory
-//
-//
+### My proposal
+
+CONTEXT : I'll be exposing possible alternatives, but not go into much depths about the implementations.
+I'll be proposing them in the order i think they should be introduced, so each new one can benefit from previous ones.
+
+
+1) Alterhitance
+CONTEXT: I'm assuming this proposal to be the first to be implemented.
+No other proposal has to come first.
+I will still try to pay attention to the final product.
+However, this proposal is independant of any other coming proposal.
+As such, it should be evaluated for the values it bring on its own first, and for the value it brings in the complete update (with all my other proposal) second.
+
+This is the dedicated feature for dependency injection / inheritance tree alteration.
+This could be a dedicated module, hosting the few utils functions allowing for easy access / use of the feature.
+
+This one is fairly straightforward, the key idea is that i don't wanna rely on super or MRO, not so much at least.
+It is possible to simply set the value of __bases__ of any class, so that would be my way to go.
+
+In the same example as before :
+```
+class Glider:
+    def push(self)
+        print("I can't move so good on the ground")
+
+    def jump(self):
+        print("I'm free! I can fly now!")
+
+class Wheel:
+    def push(self)
+        print("let's roll !")
+
+    def jump(self):
+        print("oh damn, i'm falling fast!")
+
+class WheelGlider(Wheel, Glider):
+    def push(self):
+        super().push()
+        super(Wheel, self).push()
+
+    def jump(self):
+        super(Wheel, self).jump()
+        super().jump()
+```
+
+The way to inject the mocked class in would be:
+```
+from alterhitance import Alter
+
+class MockedWheel(Wheel):
+    def push(self):
+        print("mocked wheel push")
+    def jump(self):
+        print("mocked wheel jump")
+
+WithMockedWheel = Alter(WheelGlider).replace(parent=Wheel, new_parent=MockedWheel)
+
+class MockedGlider(Glider):
+    def push(self):
+        print("mocked glider push")
+    def jump(self):
+        print("mocked glider jump")
+
+WithMockedWheelAndGlider = Alter(WithMockedWheel).replace(parent=Glider, new_parent=MockedGlider)
+
+class MockedWheelGlider(WithMockedWheelAndGlider):
+d    def push(self):
+        print("mocked WG push")
+        super().push()
+    def jump(self):
+        print("mocked WG jump")
+        super().jump()
+```
+
+This highlight the ability of this feature to produce each new class with a Mocked parent with relative ease.
+Note that contrary to what we have to do now, MockedWheelGlider only needs to inherit from one class.
+
+The way i've illustrated it here showcases that each class can be injected at once, without having to one shot everything.
+If you were to create the mock of WheelGlider first, and wanted to mock one of it's parent down the inheritance tree, it could be doable like that:
+
+```
+from alterhitance import Alter
+
+class MockedWheel(Wheel):
+    def push(self):
+        print("mocked wheel push")
+    def jump(self):
+        print("mocked wheel jump")
+
+class MockedGlider(Glider):
+    def push(self):
+        print("mocked glider push")
+    def jump(self):
+        print("mocked glider jump")
+
+class MockedWheelGlider(WheelGlider):
+d    def push(self):
+        print("mocked WG push")
+        super().push()
+    def jump(self):
+        print("mocked WG jump")
+        super().jump()
+
+WithMockedWheel = Alter(MockedWheelGlider).replace(child=WheelGlider, parent=Wheel, new_parent=MockedWheel)
+WithMockedWheelAndGlider = Alter(WithMockedWheel).replace(child=WheelGlider, parent=Glider, new_parent=MockedGlider)
+```
+
+Note that in this example, we not only define each mock in accordance *only* to what class they are mocking, but we still have a very simple interface for the bottom class MockedWheelGlider. It too only needs to inherit from WheelGlider.
+
+Finally, having to call the replace method twice feels a bit redundant, maybe a syntax such as:
+```
+FullyMockedWheelGlider = Alter(MockedWheelGlider).replace(child=WheelGlider, remap={Wheel: MockedWheel, Glider: MockedGlider})
+```
+would be a nicer API.
+
+What's to know :
+Alter class from the alterhitance module take a class at initialisation.
+all later operation it will run will happen on this class inheritance tree.
+
+Assuming we're in the Alter(Example) instance:
+the replace method takes a few arguments :
+ - child, which is the class in the inheritance tree of Example (all occurence of this class, not only the first one, might need more argument to select one in particular if it is present multiple times today)
+ - parent, which is supposed to be present in the __bases__ of child
+ - new_parent, which is gonna take the place of parent in __bases__ of child (same index)
+ - remap, which is essentially a dict of parent : new_parent.
+
+I'm not sure if the argument child is needed, as finding out the child class in the inheritance tree is essentially the same problem as finding the parent class in the inheritance tree.
+However, it could be a way to lock the remap only to parent in the __bases__ of the correct child class. This argument should probably be optional tho.
+
+
+Alter could provide more methods, such as prune, and add_branch
+We could also want to be able to select only a branch from the inheritance tree, which would help inspection of the class.
+That could turn out usefull for dynamically generated classes, for example, classes altered by Alter itself.
+
+
+
+Pros of this solution:
+ - It makes it easier to mock classes individually as seen in the exemple. In general, it make dependency injection step by step possible.
+ - The API as presented here allows to name each responsibility (Alter, replace, prune, add_branch) , which today's solution do not provide. This makes this feature much more accessible than today's very roundabout ways.
+ - No knowledge of MRO or super is required.
+ - it relies on __bases__, which is a little bit more straightforward (this is essentially the value that defines a class parents), and would make this feature more resilient to changes on MRO and super (no matter how MRO resolves anything, alterhitance updates the __bases__, so MRO will find the replacment at the same time it found the original).
+ - does most definitely *not* need to change anything with current MRO + super to work.
+
+Open questions:
+ - I don't know exactly if we need to keep track of the remapping in inheritance trees that have been reworked. super's argument being classes, that we might be remapping or not, should super be changed to account for the new target? I think it works fine now, but in the long term goal of switching to a feature that would take the target of proxying as argument, that would turn out to be needed.
+ - I'm not fixed on any method names, or the overall structure, with the Alter class, alterhitance module, and so on.
+ - I'm not fixed either on methods signatures either
+ - I'm not exactly sure how to cover remap of classes that appear multiple times in the inheritance tree. I'd want a way to target a specific appearance alone, this would allow to "undiamond" diamond cases. I also don't know how much this is needed or not.
+
+
+2) Postponed / Delayed inheritance OR deep inheritance definition.
+I'm not fixed on the name yet.
+
+CONTEXT: I'm assuming this proposal comes in second.
+I'm assuming the altheritance proposal was accepted, and implemented first.
+I will still try to pay attention to the final product.
+However, this proposal is independant of any other coming proposal.
+As such, it should be evaluated for the values it bring on its own first, and for the value it brings in the complete update (with all my other proposal) second.
+
+The example "Too many combinatory":
+```
+class View:
+    def render(self):
+        # do smthg
+class ListView(View):
+    def render(self):
+        # do smthg
+class DetailView(View):
+    def render(self):
+        # do smthg
+...
+
+class Permission:
+    def render(self):
+        # do smthg
+        super().render()
+        # do smthg
+class LoginRequired:
+    def render(self):
+        # do smthg
+        super().render()
+        # do smthg
+```
+
+Showcases a usecase where we really want inheritance, but in practice, can't be reasonably expected.
+The two reasons being:
+ - there's way too many combinations
+ - it's not really possible to reuse a child for another parent.
+
+I propose that such scenarios would be able to define the inheritance links between the View classes and the mixins after their definition, when themselves inhreited from:
+
+```
+class MyView(
+    LoginRequired(
+        Permission(
+            View
+        )
+    )
+):
+    pass
+```
+
+would be a valid syntax.
+
+Essentially, the idea is that, at definition, the syntax ```Son(Dad)``` means Son inherits from Dad.
+So, in the example above, it would mean :
+MyView inherits from LoginRequired, which inherits from Permission, which inherits from View.
+
+
+On its own, this syntax doesn't account well for cases where a mixin would be inheriting from multiple parents.
+So it might be beneficial to add a Placeholder class like that :
+
+```
+class Permission(placeholder as view, placeholder as template):
+    ...
+
+
+class MyView(
+    Permission(
+        view = View,
+        template = Template
+    )
+):
+```
+
+Thinking about the long term full proposal, having a way to tell which class replaces which without relying on the order of their declaration is relevant, as the proxy feature will likely have to account for remapping.
+
+
+This feature could probably (partially at least) be provided by the alterhitance module.
+```
+Inherited = Alter(Permission).add_branch(View)
+Inherited = Alter(LoginRequired).add_branch(Inherited)
+
+class MyView(Inherited):
+    ...
+```
+
+But this is not as nice an API as this proposal.
+
+Pros:
+ - it essentially extends the capacity of class definition.
+ - it makes it very obvious which class specializes which, and produces the inheritances tree accordingly
+ - it is consistent with the inheritance syntax we all know.
+ - it isolates the feature from super + MRO more than today's solution, as the ability of super to target sideway, on the cases where we couldn't produce normal inheritance, is now covered
+ - it replaces a multiple inheritance scenario with simple inheritance.
+
+
+
+3) The Diamond problem
+
+4) Proxy
+
+5) Method resolution
