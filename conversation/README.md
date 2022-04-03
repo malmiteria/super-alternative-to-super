@@ -98,7 +98,6 @@ class ProudGobelin(HighGobelin):
         print("I ... can't ... contain my scream!")
         super().scream()
 
-
 class HalfBreed(ProudGobelin, CorrupteGobelin):
     def scream(self):
         # 50% chance to call ProudGobelin scream, 50% chance to call CorruptedGobelin scream
@@ -989,7 +988,245 @@ Pros:
 
 
 3) The Diamond problem
+CONTEXT: I'm assuming this proposal comes in third.
+I'm assuming the altheritance proposal was accepted, and implemented first.
+I'm assuming the postponed inheritance proposal was accepted, and implemented second.
+I will still try to pay attention to the final product.
+However, this proposal is independant of any other coming proposal.
+As such, it should be evaluated for the values it bring on its own first, and for the value it brings in the complete update (with all my other proposal) second.
+Implementation specific details might require some more features tho, I'm still unclear on that.
+
+As illustrated by the example "diamond tree, repeat top", it is possible to come up with scenarios in which the methods from the top part of the diamond are expected to be specialised by each parent extending it.
+It is also very easy to come up with exemples where we would want to top parent specialised only once.
+For exemple, if the top parent has a save method, that commits something to a database.
+We wouldn't want one call to the bottom child save method to perform multiple commits
+
+This highlights a need for multiple strategies.
+
+I propose we add either a decorator, a class attribute, or maybe just an unbound method to specify this strategy.
+
+```
+from specialisation_strat import spec, strats
+class Model:
+    @spec(strats.after_last)
+    def save(self):
+        # call me once
+
+class LeftModel(Model):
+    def save(self):
+        super().save()
+
+class RightModel(Model):
+    def save(self):
+        super().save()
+
+class BottomModel(LeftModel, RightModel):
+    def save(self):
+        super().save()
+```
+
+In this exemple, a call to BottomModel().save() visits Model save method only once, when the last call to super refering to it is performed.
+
+
+```
+from specialisation_strat import spec, strats
+class HighGobelin:
+    @spec(strats.after_each)
+    def scream(self):
+        print("raAaaaAar")
+
+class CorruptedGobelin(HighGobelin):
+    def scream(self):
+        print("my corrupted soul makes me wanna scream")
+        super().scream()
+
+class ProudGobelin(HighGobelin):
+    def scream(self):
+        print("I ... can't ... contain my scream!")
+        super().scream()
+
+class HalfBreed(ProudGobelin, CorrupteGobelin):
+    def scream(self):
+        if random.choices([True, False]):
+            super(HalfBreed, self).scream()
+        else:
+            super(ProudGobelin, self).scream()
+```
+
+In this exemple, a call to HalfBreed().scream() visits HighGobelin scream method every time a super().scream() call refering to it is performed.
+
+We could also allow the child to decide how it wanna specialise it's inheritance tree, so instead of decorating the top parent, we would decorate the bottom method
+
+Both option seem to make sense to me, i'd argue we could allow top parent definition *and* override from a child class.
+For a child class to get more control, we could add another strategy after_classes that would expect a list of class.
+this list of class would be the list of class whose call to super().method would not be ignored.
+
+Whatever we decide, this would apply for cases more complex than the diamond cases, essentially, whenever a class appears multiple times in an inheritance tree.
+I'm assuming more specific need could be covered, such as allowing strats per branch of the inheritance tree, but this might not be meaningful, as talking about branch doesn't make so much sense when they merge back together.
+
+
+I think this could be implemented by making use of the altheritance module.
+A strat that visits only after last call is the default option, but the strat to call it every time might need some magic from that.
+Possibly by using a clone of the top class, (through something copy.deepcopy?) so that super and MRO don't identify it as the same class, and would therefore allow for multiple visits.
+
+When the future proxy + method resolution features are implemented, altheritance would most definitely be the way to go i think.
+
+
+Pros:
+ - essentially solve the diamond problem
+ - implementation specifics might rely on MRO and super, but this extract a behavior that we can easily evolve with those feature later on, to preserve the default behavior of today, and allow for more.
 
 4) Proxy
+CONTEXT: I'm assuming this proposal comes in fourth.
+I'm assuming the altheritance proposal was accepted, and implemented first.
+I'm assuming the postponed inheritance proposal was accepted, and implemented second.
+I'm assuming the diamond problem proposal was accepted, and implemented third.
+I will still try to pay attention to the final product.
+However, this proposal is independant of any other coming proposal.
+As such, it should be evaluated for the values it bring on its own first, and for the value it brings in the complete update (with all my other proposal) second.
+
+Since we covered all features that relied on super relying on MRO, we can detach the proxy feature from the MRO feature.
+This would be a breaking change, as after this change, all code not migrated to the 3 previous features would break.
+
+Other than not relying on MRO, there's one thing i wanna change, the proxy feature argument should be the class it targets, instead of today's indirection where you have to pass as argument the previous in MRO order.
+
+with the Halfbreed class in the previous example, it would change from
+```
+class HalfBreed(ProudGobelin, CorrupteGobelin):
+    def scream(self):
+        if random.choices([True, False]):
+            super(HalfBreed, self).scream()
+        else:
+            super(ProudGobelin, self).scream()
+```
+to:
+```
+class HalfBreed(ProudGobelin, CorrupteGobelin):
+    def scream(self):
+        if random.choices([True, False]):
+            self.__as_parent__(ProudGobelin).scream()
+        else:
+            self.__as_parent__(CorrupteGobelin).scream()
+```
+
+In case of simple inheritance, the parent wouldn't need to be passed to __as_parent__:
+
+```
+class Dad:
+    def joke(self):
+        print("I love your mom")
+
+class Son(Dad):
+    def joke(self):
+        print("dad said")
+        self.__as_parent__().joke()
+```
+
+Note that i'm not passing self as an argument to __as_parent__, i'm calling __as_parent__ on self instance instead.
+This makes it awkward to call __as_parent__ for class attributes, like we 'could' (the class wasn't available in its definition) with super:
+
+```
+class A:
+    value = 10
+class B(A):
+    value = super().value # wouldn't actually work
+```
+
+would be replaced by
+```
+class A:
+    value = 10
+class B(A):
+    value = __as_parent__().value # wouldn't actually work
+```
+
+However, direct A.value calls are enough, the proxy feature is not needed here at all
+```
+class A:
+    value = 10
+class B(A):
+    value = A.value
+```
+
+We would need to adapt the diamond strats, as now passing the target class as argument, instead of implicitely selecting the next in MRO order switches the default behavior in diamond case from call after last, to call after each.
+The default strat should be kept on call after last, to allow for smoother transition
+The implementation of the diamond strat module would have to adapt to the change of targeting strategy of the proxy feature, which might not be automatic
+
+The altheritance module should not require a lot of extra changes.
+Maybe, thinking of a class to add for pruned branches would be nice, as it would allow the childs to proxy it, instead of crashing for the lack of a target.
+A remap dict should probably be stored in classes that are remapped, so the proxy feature can reroute the calls from the target to the remapped parent.
+
+The postpone inheritance feature would probably benefit from the introduction, if not done already, of the placeholder parent, so they could serve as target of the proxy (which has to be explicit calls in case of multiple inheritance).
+
+Pros:
+ - implicitness of the target is still possible
+ - explicitness of the target is required when multiple parent are present (easier to read / understand the code later)
+ - same simplicity of API.
 
 5) Method resolution
+CONTEXT: I'm assuming this proposal comes in last.
+I'm assuming the altheritance proposal was accepted, and implemented first.
+I'm assuming the postponed inheritance proposal was accepted, and implemented second.
+I'm assuming the diamond problem proposal was accepted, and implemented third.
+I'm assuming the proxy proposal was accepted, and implemented fourth, with all the update to the previous 3 features to survive this breaking change.
+I'm talking here only about the changes to the method resolution, and eventually how it integrates with previous faetures, but not about the previous features themselves. 
+As such, it should be evaluated for the values it bring on its own first, and for the value it brings in the complete update (with all my other proposal) second.
+
+
+Today's MRO forces resolution in any scenarios, which comes at the cost of not allowing some inheritance trees.
+
+My proposal is that we stop ordering the parents.
+
+The specs are:
+a method defined in a class body should always be the one resolved to.
+when only one parent can resolve it, resolves to this method.
+when no parent can resolve it, raises an AttributeError
+when multiple parent can resolve it, raises an ExplicitResolutionRequired
+
+
+to give some examples :
+straightforward
+```
+class A:
+    def method(self): # A.method resolves to this one
+        pass
+```
+
+one parent:
+```
+class P1: pass
+class P2: pass
+class P:
+    def method(self): # A.method resolves to this one
+        pass
+class A(P1, P2, P): pass
+```
+
+multiple parents:
+```
+class P1:
+    def method(self): # this is a candidate for A.method
+        pass
+class P2:
+    def method(self): # this is a candidate for A.method
+        pass
+class A(P1, P2): pass # A.method have multiple candidate, it raises (at runtime) an ExplicitnessRequiredError
+```
+
+how to 'survive' an expliciteness required error:
+```
+class P1:
+    def method(self): # this is not a candidate for A.method anymore
+        pass
+class P2:
+    def method(self): # this is not a candidate for A.method anymore
+        pass
+class A(P1, P2):
+    def method(self): # this is what A.method resolves to
+        pass # eventual calls to self.__as_parent__(P1).method() and self.__as_parent__(P2).method() here
+```
+
+Pros:
+ - It requires explicitness when it can't resolve implicitely
+ - It works with any inheritance tree (even circular ones if we had some code to prevent loops...)
+ - You won't end up accidentally losing one method / attribute from one parent only because another one had it first
