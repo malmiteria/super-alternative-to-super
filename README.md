@@ -82,7 +82,8 @@ class A(B):
 A().method() # prints A then prints B
 ```
 
-In case of multiple inheritance, super visit the next class in line:
+
+In case of multiple inheritance, super visits the next class in line:
 ```
 class C:
     def method(self):
@@ -98,8 +99,9 @@ class A(B,C):
 A().method() # prints A then prints B (and never prints C)
 ```
 
-in this exemple, if you want A().method() to print A B C using super, you have two options, both are not 100% reliable:
-option 1, which is consistent with the argumentless syntax of super, but make it impossible to use B().method() as it now would raise an error.:
+
+in this exemple, if you want `A().method()` to print A B C using `super`, you have two options, both are not reliable:
+option 1, which is consistent with the argumentless syntax of `super`, but make it impossible to use B().method() as it now would raise an error.:
 ```
 class C:
     def method(self):
@@ -113,7 +115,7 @@ class A(B,C):
         print('A')
         super().method()
 ```
-option 2, which would still allow B().method() to run properly, but some inheritance trees including A could fail:
+option 2, which would still allow `B().method()` to run properly, but some inheritance trees including A could fail:
 ```
 class C:
     def method(self):
@@ -147,7 +149,7 @@ The mro as it stands is flawed in five ways in my opinion:
  - it doesn't allows for duplicates, assuming that no one would want that.
  - it assumes it is possible / meaningful to 'order' an inheritance tree, when such a thing is definitely not a given.
 
-super as it stands is flawed in three ways in my opinion:
+`super()` as it stands is flawed in two ways in my opinion:
  - it relies on mro, so it brings in all mro flaws with it
  - it adds a level of indirection by giving the context of the next in mro line instead of the context of the class passed as argument : ```super(A, self)``` is a proxy to the parent of A, not of A.
  - it doesn't explicitely tell what parent it will access, which can be confusing in case of multiple inheritance
@@ -158,11 +160,13 @@ super as it stands is flawed in three ways in my opinion:
 The mro is a solution to a possible conflict between multiple parents methods. As much as i would prefer the error to not be silenced, a solution should still be provided.
 It works very well for simple cases, and any other solutions should probably do as well on those simple cases.
 
-super acts as a proxy to the class it points to, meaning we don't have to pass the instance as first argument of any method accessed through super.
+
+`super()` acts as a proxy to the class it points to, meaning we don't have to pass the instance as first argument of any method accessed through super.
 super is very easy to use in general, and the simple cases work as expected.
 
 It could also be argued that the actual behavior of super could be useful in some cases, as a good understanding of its behavior really allows good control over someone else's classes.
 I would personally argue that such a feature is not related to the core feature of super, could also be considered a flaw as lib maker might wanna lock their classes inheritance trees, and as such, won't be considered something to keep in the solution I'm building.
+
 
 
 # What would be an ideal solution
